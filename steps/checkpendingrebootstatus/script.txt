@@ -1,0 +1,22 @@
+$rebootReasons = @()
+
+$cbsKey = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based Servicing\RebootPending"
+if (Test-Path $cbsKey) { $rebootReasons += "Component Based Servicing" }
+
+$wuKey = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Update\RebootRequired"
+if (Test-Path $wuKey) { $rebootReasons += "Windows Update" }
+
+$pfroKey = "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager"
+$pfro = (Get-ItemProperty -Path $pfroKey -Name PendingFileRenameOperations -ErrorAction SilentlyContinue).PendingFileRenameOperations
+if ($pfro) { $rebootReasons += "Pending file rename operations" }
+
+if ($rebootReasons.Count -eq 0) {
+    Write-Output "CHECK Reboot Pending : No reboot pending — all updates fully applied"
+    exit 0
+}
+
+Write-Output "CHECK Reboot Pending : REBOOT REQUIRED to complete update installation"
+$rebootReasons | ForEach-Object { Write-Output "  Reason: $_" }
+Write-Output ""
+Write-Output "Schedule a maintenance window reboot to complete OS update installation."
+Write-Output "The server is not fully patched until the reboot completes."

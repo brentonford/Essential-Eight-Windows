@@ -1,0 +1,115 @@
+$hostname       = $env:COMPUTERNAME
+$reportDate     = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+$internetFacing = "{serverInternetFacing}".ToLower().Trim()
+$serverClass    = if ($internetFacing -eq "yes") { "Internet-facing" } else { "Non-internet-facing" }
+$thresholdDays  = if ($internetFacing -eq "yes") { 14 } else { 30 }
+$ismTiming      = if ($internetFacing -eq "yes") { "ISM-1694 / ISM-1877" } else { "ISM-1695" }
+$ismScanning    = if ($internetFacing -eq "yes") { "ISM-1701 (daily)" } else { "ISM-1702 (fortnightly)" }
+
+# OS lifecycle
+$os          = Get-CimInstance -ClassName Win32_OperatingSystem
+$buildNumber = [int]$os.BuildNumber
+$lifecycleTable = @(
+    @{ Build = 20348; Status = "SUPPORTED"; End = "2031-10-14" },
+    @{ Build = 17763; Status = "SUPPORTED"; End = "2029-01-09" },
+    @{ Build = 14393; Status = "SUPPORTED"; End = "2027-01-12" },
+    @{ Build = 9600;  Status = "END OF LIFE"; End = "2023-10-10" },
+    @{ Build = 9200;  Status = "END OF LIFE"; End = "2023-10-10" },
+    @{ Build = 7601;  Status = "END OF LIFE"; End = "2020-01-14" },
+    @{ Build = 6002;  Status = "END OF LIFE"; End = "2020-01-14" }
+)
+$match   = $lifecycleTable | Where-Object { $_.Build -eq $buildNumber }
+$ism1501 = if ($null -eq $match) { "UNKNOWN" } elseif ($match.Status -eq "END OF LIFE") { "FAIL" } else { "PASS" }
+
+# Pending updates
+$pendingCount = 0
+$module = Get-Module -ListAvailable -Name PSWindowsUpdate
+if ($null -ne $module) {
+    Import-Module PSWindowsUpdate
+    $excludeTitlePattern = "Feature update|Upgrade to"
+    $pending       = Get-WindowsUpdate `
+        -Category "Security Updates", "Critical Updates" `
+        -NotTitle $excludeTitlePattern `
+        -ErrorAction SilentlyContinue
+    $pendingCount  = if ($null -ne $pending) { $pending.Count } else { 0 }
+}
+$pendingCheck = if ($pendingCount -eq 0) { "PASS" } else { "FAIL" }
+
+# Patch timing
+$daysSince   = -1
+$timingCheck = "SKIP"
+if ($null -ne $module) {
+    $lastPatch = Get-WUHistory -ErrorAction SilentlyContinue |
+        Where-Object {
+            ($_.Categories -match "Security Updates" -or $_.Categories -match "Critical Updates") -and
+            $_.ResultCode -eq 2
+        } |
+        Sort-Object Date -Descending |
+        Select-Object -First 1
+    if ($null -ne $lastPatch) {
+        $daysSince   = ((Get-Date) - $lastPatch.Date).Days
+        $timingCheck = if ($daysSince -le $thresholdDays) { "PASS" } else { "FAIL" }
+    } else {
+        $timingCheck = "FAIL"
+    }
+}
+
+# Defender
+$mpStatus      = Get-MpComputerStatus -ErrorAction SilentlyContinue
+$maxSigAge     = if ($internetFacing -eq "yes") { 1 } else { 14 }
+$sigAge        = if ($null -ne $mpStatus) { ((Get-Date) - $mpStatus.AntivirusSignatureLastUpdated).Days } else { 9999 }
+$defenderCheck = if ($null -ne $mpStatus -and $mpStatus.RealTimeProtectionEnabled -and $sigAge -le $maxSigAge) { "PASS" } else { "PARTIAL" }
+
+# Reboot
+$rebootPending = (Test-Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based Servicing\RebootPending") -or
+                 (Test-Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Update\RebootRequired")
+
+# Overall
+$checks        = @($ism1501, $pendingCheck, $timingCheck)
+$overallStatus = if ($checks -contains "FAIL") { "NON-COMPLIANT" } elseif ($defenderCheck -eq "PARTIAL") { "PARTIALLY COMPLIANT" } else { "COMPLIANT" }
+
+$separator = "=" * 60
+
+Write-Output $separator
+Write-Output "  ESSENTIAL EIGHT ML1 -- PATCH OPERATING SYSTEMS"
+Write-Output "  ASD Control: Mitigation Strategy 6"
+Write-Output "  ISM Controls: 1501, $ismTiming, $ismScanning"
+Write-Output "  Reference  : cyber.gov.au/essential-eight"
+Write-Output $separator
+Write-Output "  Server              : $hostname"
+Write-Output "  Server class        : $serverClass"
+Write-Output "  Report Date         : $reportDate"
+Write-Output "  Generated           : AttuneOps"
+Write-Output $separator
+Write-Output ""
+Write-Output "  [ISM-1501] OS Lifecycle"
+Write-Output "    OS        : $($os.Caption) (build $buildNumber)"
+Write-Output "    EoL date  : $(if ($null -ne $match) { $match.End } else { 'Unknown' })"
+Write-Output "    Result    : $ism1501"
+Write-Output ""
+Write-Output "  [$ismTiming] Patch Timing"
+Write-Output "    Threshold         : $thresholdDays days ($serverClass)"
+Write-Output "    Days since patch  : $(if ($daysSince -ge 0) { $daysSince } else { 'Unknown' })"
+Write-Output "    Pending updates   : $pendingCount"
+Write-Output "    Result            : $timingCheck / $pendingCheck"
+Write-Output ""
+Write-Output "  [$ismScanning] Vulnerability Scanning"
+Write-Output "    Defender active   : $($null -ne $mpStatus -and $mpStatus.RealTimeProtectionEnabled)"
+Write-Output "    Signature age     : $sigAge days (threshold: $maxSigAge days)"
+Write-Output "    Result            : $defenderCheck"
+if ($defenderCheck -eq "PARTIAL") {
+    Write-Output "    NOTE: Deploy a dedicated vulnerability scanner for full compliance"
+}
+Write-Output ""
+Write-Output "  Reboot Pending      : $rebootPending"
+if ($rebootPending) {
+    Write-Output "    ACTION: Schedule maintenance window reboot to complete patching."
+}
+Write-Output ""
+Write-Output $separator
+Write-Output "  OVERALL STATUS : $overallStatus"
+Write-Output $separator
+
+if ($overallStatus -eq "NON-COMPLIANT") {
+    exit 1
+}

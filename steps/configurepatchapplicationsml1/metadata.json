@@ -20,9 +20,6 @@
         }, 
         {
             "stepKey": "rebootmachine"
-        }, 
-        {
-            "stepKey": "iswindowsup"
         }
     ], 
     "name": "Configure Patch Applications - ML1", 

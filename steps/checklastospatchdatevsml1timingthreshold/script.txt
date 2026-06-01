@@ -1,0 +1,53 @@
+# ISM-1694: internet-facing — 2-week threshold (14 days) for non-critical patches
+# ISM-1877: internet-facing — 48-hour threshold for critical patches
+# ISM-1695: non-internet-facing — 1-month threshold (30 days)
+#
+# The timing check uses PSWindowsUpdate WU history filtered to Security/Critical categories.
+# The {serverInternetFacing} parameter selects which ISM control and threshold applies.
+
+$internetFacing = "{serverInternetFacing}".ToLower().Trim()
+$thresholdDays  = if ($internetFacing -eq "yes") { 14 } else { 30 }
+$applicableISM  = if ($internetFacing -eq "yes") { "ISM-1694 (internet-facing: 14-day threshold)" } else { "ISM-1695 (non-internet-facing: 30-day threshold)" }
+$serverClass    = if ($internetFacing -eq "yes") { "Internet-facing" } else { "Non-internet-facing" }
+
+Write-Output "Server classification : $serverClass"
+Write-Output "Applicable ISM control: $applicableISM"
+Write-Output "Compliance threshold  : $thresholdDays days"
+Write-Output ""
+
+$module = Get-Module -ListAvailable -Name PSWindowsUpdate
+if ($null -eq $module) {
+    Write-Output "CHECK Patch Timing : SKIP — PSWindowsUpdate not installed"
+    exit 0
+}
+
+Import-Module PSWindowsUpdate
+
+$history = Get-WUHistory -ErrorAction SilentlyContinue |
+    Where-Object {
+        ($_.Categories -match "Security Updates" -or $_.Categories -match "Critical Updates") -and
+        $_.Title -notmatch "Feature update" -and
+        $_.ResultCode -eq 2
+    } |
+    Sort-Object Date -Descending |
+    Select-Object -First 1
+
+if ($null -eq $history) {
+    Write-Output "CHECK Patch Timing : FAIL — no successful OS security update history found"
+    exit 1
+}
+
+$daysSinceLastPatch = ((Get-Date) - $history.Date).Days
+
+Write-Output "Most recent OS security update : $($history.Title)"
+Write-Output "Date applied                   : $($history.Date.ToString('yyyy-MM-dd HH:mm:ss'))"
+Write-Output "Days since last OS patch       : $daysSinceLastPatch"
+Write-Output "Threshold                      : $thresholdDays days"
+
+if ($daysSinceLastPatch -le $thresholdDays) {
+    Write-Output "CHECK Patch Timing : PASS ($daysSinceLastPatch days — within ${thresholdDays}-day threshold)"
+    exit 0
+}
+
+Write-Output "CHECK Patch Timing : FAIL ($daysSinceLastPatch days — exceeds ${thresholdDays}-day threshold)"
+exit 1

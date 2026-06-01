@@ -1,0 +1,33 @@
+{
+    "actionOnStepFail": "stop", 
+    "concurrency": 1, 
+    "enabled": true, 
+    "externalUuid4": "d2254131-ff08-4f1c-8f31-e47285e5e1ad", 
+    "isBlueprint": true, 
+    "key": "configurepatchoperatingsystemsml1", 
+    "links": [
+        {
+            "stepKey": "checkoslifecyclestatus"
+        }, 
+        {
+            "stepKey": "configurewindowsupdateclientsettings"
+        }, 
+        {
+            "stepKey": "configurewindowsdefenderforvulnerabilityscanning"
+        }, 
+        {
+            "stepKey": "verifypswindowsupdatemoduleisinstalled"
+        }, 
+        {
+            "stepKey": "performwindowsupdateforsecurityupdates"
+        }, 
+        {
+            "stepKey": "rebootmachine"
+        }, 
+        {
+            "stepKey": "checkpendingossecurityupdates"
+        }
+    ], 
+    "name": "Configure Patch Operating Systems - ML1", 
+    "type": "com.servertribe.attune.tuples.StepGroupTuple"
+}

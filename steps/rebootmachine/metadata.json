@@ -1,16 +1,18 @@
 {
     "actionOnStepFail": "stop", 
+    "concurrency": 1, 
     "enabled": true, 
-    "externalUuid4": "d46cd820-f230-46c3-911a-6149c2554348", 
-    "interpreter": 2, 
-    "interpreterCommand": null, 
-    "interpreterScriptExt": null, 
-    "interpreterScriptSyntax": null, 
+    "externalUuid4": "f1642573-7226-4545-8baf-7fcdae0458a5", 
+    "isBlueprint": false, 
     "key": "rebootmachine", 
+    "links": [
+        {
+            "stepKey": "rebootingmachine"
+        }, 
+        {
+            "stepKey": "iswindowsup"
+        }
+    ], 
     "name": "Reboot Machine", 
-    "osCredKey": "windowscredential", 
-    "serverKey": "windowsserver", 
-    "successExitCode": 0, 
-    "timeout": 60, 
-    "type": "com.servertribe.attune.tuples.StepWinRmTuple"
+    "type": "com.servertribe.attune.tuples.StepGroupTuple"
 }

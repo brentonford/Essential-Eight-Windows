@@ -1,0 +1,37 @@
+{
+    "actionOnStepFail": "stop", 
+    "blueprintName": null, 
+    "blueprintUuid": "77a96005-d8fb-4d50-9223-df6e3b147631", 
+    "cloneUrl": "https://github.com/AttuneOps/Automate-Windows-Updates.git", 
+    "enabled": true, 
+    "externalUuid4": "e740d820-5019-4379-8df5-3260708f54a8", 
+    "isBlueprint": false, 
+    "key": "performwindowsupdateforsecurityupdates", 
+    "name": "Perform Windows Update for Security Updates", 
+    "parameterMap": [
+        {
+            "childParameterName": null, 
+            "childParameterType": "c.s.s.b.phv.WindowsServer", 
+            "childParameterUuid": "0d38f8f0-724d-4eec-b753-5058e6622f5e", 
+            "childProjectName": null, 
+            "childProjectUuid": "fd5a817e-7472-4116-a915-173c9a4df5fb", 
+            "childProjectVersion": "master", 
+            "parentParameterKey": "windowsserver", 
+            "parentStaticTextValue": null
+        }, 
+        {
+            "childParameterName": null, 
+            "childParameterType": "c.s.s.b.phv.WinOsCred", 
+            "childParameterUuid": "9961d351-cf58-4e33-a3b7-42ad1060ec0c", 
+            "childProjectName": null, 
+            "childProjectUuid": "fd5a817e-7472-4116-a915-173c9a4df5fb", 
+            "childProjectVersion": "master", 
+            "parentParameterKey": "windowscredential", 
+            "parentStaticTextValue": null
+        }
+    ], 
+    "projectName": null, 
+    "projectUuid": "fd5a817e-7472-4116-a915-173c9a4df5fb", 
+    "projectVersion": "master", 
+    "type": "com.servertribe.attune.tuples.StepProjectLinkTuple"
+}

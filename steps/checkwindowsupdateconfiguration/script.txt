@@ -1,0 +1,23 @@
+$wuPath  = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU"
+$wuProps = Get-ItemProperty -Path $wuPath -ErrorAction SilentlyContinue
+
+if ($null -eq $wuProps) {
+    Write-Output "CHECK Windows Update Config : WARN — no policy path found"
+    Write-Output "Windows Update may be using default settings or WSUS/WUfB may be configured elsewhere."
+    exit 0
+}
+
+$noAutoUpdate = $wuProps.NoAutoUpdate
+$auOptions    = $wuProps.AUOptions
+
+Write-Output "NoAutoUpdate : $noAutoUpdate (0 = updates enabled)"
+Write-Output "AUOptions    : $auOptions (3 = auto-download/notify, 4 = auto-install)"
+
+$wuEnabled = $noAutoUpdate -eq 0
+$wuCheck   = if ($wuEnabled) { "PASS" } else { "FAIL — NoAutoUpdate is set to 1" }
+
+Write-Output "CHECK Windows Update Config : $wuCheck"
+
+if ($wuCheck -ne "PASS") {
+    exit 1
+}

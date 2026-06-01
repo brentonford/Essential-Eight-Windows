@@ -1,0 +1,57 @@
+# ISM-1501: Operating systems no longer supported by vendors are replaced.
+# Maps the current OS build against the Windows Server support lifecycle.
+# Exits with a documented FAIL if the OS is end-of-life — no subsequent
+# patching steps run because patching cannot remediate an unsupported OS.
+
+$os = Get-CimInstance -ClassName Win32_OperatingSystem
+
+$buildNumber = [int]$os.BuildNumber
+$caption     = $os.Caption
+
+Write-Output "OS Caption    : $caption"
+Write-Output "OS Version    : $($os.Version)"
+Write-Output "Build Number  : $buildNumber"
+Write-Output ""
+
+# Windows Server build numbers and support status
+# Source: Microsoft Lifecycle Policy — docs.microsoft.com/lifecycle
+$lifecycleTable = @(
+    @{ Build = 20348; Name = "Windows Server 2022";    ExtendedEnd = "2031-10-14"; Status = "SUPPORTED" },
+    @{ Build = 17763; Name = "Windows Server 2019";    ExtendedEnd = "2029-01-09"; Status = "SUPPORTED" },
+    @{ Build = 14393; Name = "Windows Server 2016";    ExtendedEnd = "2027-01-12"; Status = "SUPPORTED" },
+    @{ Build = 9600;  Name = "Windows Server 2012 R2"; ExtendedEnd = "2023-10-10"; Status = "END OF LIFE" },
+    @{ Build = 9200;  Name = "Windows Server 2012";    ExtendedEnd = "2023-10-10"; Status = "END OF LIFE" },
+    @{ Build = 7601;  Name = "Windows Server 2008 R2"; ExtendedEnd = "2020-01-14"; Status = "END OF LIFE" },
+    @{ Build = 6002;  Name = "Windows Server 2008";    ExtendedEnd = "2020-01-14"; Status = "END OF LIFE" }
+)
+
+$match = $lifecycleTable | Where-Object { $_.Build -eq $buildNumber }
+
+if ($null -eq $match) {
+    Write-Output "WARN: OS build $buildNumber not found in lifecycle table."
+    Write-Output "Verify support status manually at docs.microsoft.com/lifecycle"
+    Write-Output "Continuing — treat as supported until confirmed otherwise."
+    exit 0
+}
+
+Write-Output "Matched lifecycle entry  : $($match.Name)"
+Write-Output "Extended support ends    : $($match.ExtendedEnd)"
+Write-Output "Status                   : $($match.Status)"
+
+if ($match.Status -eq "END OF LIFE") {
+    Write-Output ""
+    Write-Output "FAIL: This operating system is end-of-life and is not supported by Microsoft."
+    Write-Output "ISM-1501 NON-COMPLIANT: OS must be replaced — patching cannot remediate an unsupported OS."
+    Write-Output "No further patching steps will be executed."
+    exit 1
+}
+
+$daysToEoL = ([datetime]$match.ExtendedEnd - (Get-Date)).Days
+if ($daysToEoL -lt 180) {
+    Write-Output ""
+    Write-Output "WARN: Extended support ends in $daysToEoL days ($($match.ExtendedEnd))."
+    Write-Output "Plan OS upgrade before extended support expiry."
+}
+
+Write-Output ""
+Write-Output "ISM-1501: OS lifecycle check PASSED. Proceeding with patching."

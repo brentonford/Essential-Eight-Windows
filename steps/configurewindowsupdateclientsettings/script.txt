@@ -1,0 +1,45 @@
+# Configures the Windows Update client for ML1-appropriate behaviour:
+# - Enable Windows Update service
+# - Configure detection and download (not auto-install with auto-reboot — servers need
+#   controlled reboot windows)
+# - Enable Microsoft Update (includes non-OS Microsoft products if needed)
+#
+# AUOptions values:
+#   2 = Notify for download and notify for install
+#   3 = Auto download and notify for install
+#   4 = Auto download and schedule install
+#   5 = Allow local admin to choose setting
+# We use 3 (auto-download, notify install) for servers — downloads happen automatically
+# but reboots are controlled by the administrator / maintenance window.
+
+$wuPath = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU"
+
+if (-not (Test-Path $wuPath)) {
+    New-Item -Path $wuPath -Force | Out-Null
+}
+
+Set-ItemProperty -Path $wuPath -Name "NoAutoUpdate"          -Value 0 -Type DWord
+Set-ItemProperty -Path $wuPath -Name "AUOptions"             -Value 3 -Type DWord
+Set-ItemProperty -Path $wuPath -Name "AutoInstallMinorUpdates" -Value 1 -Type DWord
+Set-ItemProperty -Path $wuPath -Name "NoAutoRebootWithLoggedOnUsers" -Value 1 -Type DWord
+
+# Enable Microsoft Update (extends Windows Update to cover all Microsoft products)
+$muPath = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Services\Pending"
+$serviceId = "7971f918-a847-4430-9279-4a52d1efe18d"
+if (-not (Test-Path "$muPath\$serviceId")) {
+    $wuSession = New-Object -ComObject Microsoft.Update.ServiceManager
+    $wuSession.AddService2($serviceId, 7, "") | Out-Null
+    Write-Output "Microsoft Update service registered."
+}
+
+Write-Output "Windows Update client settings applied:"
+Write-Output "  NoAutoUpdate                 : 0 (updates enabled)"
+Write-Output "  AUOptions                    : 3 (auto-download, notify install)"
+Write-Output "  NoAutoRebootWithLoggedOnUsers: 1 (no forced reboot with active sessions)"
+
+$wuService = Get-Service -Name wuauserv
+if ($wuService.Status -ne "Running") {
+    Start-Service -Name wuauserv
+}
+Set-Service -Name wuauserv -StartupType Automatic
+Write-Output "Windows Update service (wuauserv): Running, startup Automatic"
