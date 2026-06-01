@@ -1,0 +1,77 @@
+# ISM-1870: Application control applied to user profiles and temporary folders
+# used by operating systems, web browsers, and email clients.
+#
+# New-CIPolicyRule -FilePathRule creates ALLOW rules only.
+# Deny rules for file paths must be written directly into the policy XML.
+# The schema is: urn:schemas-microsoft-com:sipolicy
+#
+# Each deny rule requires:
+#   1. A FilePathRule element in <FileRules> with Action="Deny"
+#   2. A FileRuleRef element in the User Mode SigningScenario (Value="12")
+
+$archivePath   = "{policyExportPath}"
+$policyName    = "E8-ML1-AppControl"
+$policyXmlPath = Join-Path $archivePath "$policyName.xml"
+
+[xml]$xml = Get-Content -Path $policyXmlPath -Raw
+
+$ns = "urn:schemas-microsoft-com:sipolicy"
+$nsManager = New-Object System.Xml.XmlNamespaceManager($xml.NameTable)
+$nsManager.AddNamespace("si", $ns)
+
+# Define the ML1 deny paths (ISM-1870)
+$denyPaths = @(
+    @{ Id = "ID_FILEPATH_DENY_TEMP_LOCAL";    Path = "%OSDRIVE%\Users\*\AppData\Local\Temp\*";    Name = "Block TEMP (Local)" },
+    @{ Id = "ID_FILEPATH_DENY_APPDATA_LOCAL"; Path = "%OSDRIVE%\Users\*\AppData\Local\*";         Name = "Block AppData Local" },
+    @{ Id = "ID_FILEPATH_DENY_APPDATA_ROAM";  Path = "%OSDRIVE%\Users\*\AppData\Roaming\*";       Name = "Block AppData Roaming" },
+    @{ Id = "ID_FILEPATH_DENY_DOWNLOADS";     Path = "%OSDRIVE%\Users\*\Downloads\*";             Name = "Block Downloads" }
+)
+
+# Get or create <FileRules> node
+$fileRulesNode = $xml.SelectSingleNode("//si:FileRules", $nsManager)
+if ($null -eq $fileRulesNode) {
+    $fileRulesNode = $xml.CreateElement("FileRules", $ns)
+    $xml.SiPolicy.InsertBefore($fileRulesNode, $xml.SiPolicy.SelectSingleNode("si:Signers", $nsManager))
+}
+
+# Get the User Mode signing scenario (Value="12") for FileRulesRef
+$userModeScenario = $xml.SelectSingleNode("//si:SigningScenario[@Value='12']", $nsManager)
+if ($null -eq $userModeScenario) {
+    Write-Error "User mode SigningScenario (Value=12) not found in policy XML."
+    exit 1
+}
+
+# FileRulesRef must be a child of ProductSigners, not SigningScenario directly.
+# Schema: SigningScenario > ProductSigners > FileRulesRef > FileRuleRef
+$productSigners = $userModeScenario.SelectSingleNode("si:ProductSigners", $nsManager)
+if ($null -eq $productSigners) {
+    $productSigners = $xml.CreateElement("ProductSigners", $ns)
+    $userModeScenario.AppendChild($productSigners) | Out-Null
+}
+
+$fileRulesRef = $productSigners.SelectSingleNode("si:FileRulesRef", $nsManager)
+if ($null -eq $fileRulesRef) {
+    $fileRulesRef = $xml.CreateElement("FileRulesRef", $ns)
+    $productSigners.AppendChild($fileRulesRef) | Out-Null
+}
+
+$denyRulesXml    = ""
+$fileRuleRefsXml = ""
+
+foreach ($denyPath in $denyPaths) {
+    $denyRulesXml += "<FilePathRule Id=""$($denyPath.Id)"" FriendlyName=""$($denyPath.Name)"" UserMode=""true"" Action=""Deny"">" +
+                     "<FileAttributes><FilePath FilePath=""$($denyPath.Path)""/></FileAttributes>" +
+                     "</FilePathRule>"
+
+    $fileRuleRefsXml += "<FileRuleRef RuleID=""$($denyPath.Id)""/>"
+
+    Write-Output "Deny rule added: $($denyPath.Name) [$($denyPath.Path)]"
+}
+
+$fileRulesNode.InnerXml  = $fileRulesNode.InnerXml + $denyRulesXml
+$productSigners.InnerXml = $productSigners.InnerXml + "<FileRulesRef>$fileRuleRefsXml</FileRulesRef>"
+
+$xml.Save($policyXmlPath)
+Write-Output ""
+Write-Output "ML1 path deny rules written to policy XML."
+Write-Output "Policy file: $policyXmlPath"

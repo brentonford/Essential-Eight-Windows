@@ -1,0 +1,55 @@
+# Event IDs in Microsoft-Windows-CodeIntegrity/Operational:
+#   3076 = Audit block -- would have been blocked in Enforce mode
+#   3077 = Enforce block -- was actively blocked
+#   3089 = Policy loaded/refreshed
+
+$logName  = "Microsoft-Windows-CodeIntegrity/Operational"
+$lookback = (Get-Date).AddDays(-7)
+
+$events = Get-WinEvent -FilterHashtable @{
+    LogName   = $logName
+    Id        = @(3076, 3077, 3089)
+    StartTime = $lookback
+} -ErrorAction SilentlyContinue
+
+if ($null -eq $events -or $events.Count -eq 0) {
+    Write-Output "No WDAC events (3076/3077/3089) found in the last 7 days."
+    Write-Output ""
+    Write-Output "Possible reasons:"
+    Write-Output "  - Server has not been rebooted since policy deployment (policy not yet active)"
+    Write-Output "  - No execution attempts occurred in the blocked paths during this period"
+    exit 1
+}
+
+$auditBlocks   = @($events | Where-Object { $_.Id -eq 3076 })
+$enforceBlocks = @($events | Where-Object { $_.Id -eq 3077 })
+$policyEvents  = @($events | Where-Object { $_.Id -eq 3089 })
+
+Write-Output "WDAC events in the last 7 days:"
+Write-Output "  3076 Audit blocks   : $($auditBlocks.Count)"
+Write-Output "  3077 Enforce blocks : $($enforceBlocks.Count)"
+Write-Output "  3089 Policy events  : $($policyEvents.Count)"
+
+if ($policyEvents.Count -gt 0) {
+    $latest = $policyEvents | Sort-Object TimeCreated -Descending | Select-Object -First 1
+    Write-Output ""
+    Write-Output "Most recent policy event: $($latest.TimeCreated.ToString('yyyy-MM-dd HH:mm:ss'))"
+}
+
+if ($auditBlocks.Count -gt 0) {
+    Write-Output ""
+    Write-Output "Recent audit blocks (last 5) -- review before switching to Enforce:"
+    $auditBlocks | Sort-Object TimeCreated -Descending | Select-Object -First 5 | ForEach-Object {
+        $msg = $_.Properties | Select-Object -ExpandProperty Value -ErrorAction SilentlyContinue
+        Write-Output "  [$($_.TimeCreated.ToString('yyyy-MM-dd HH:mm:ss'))] $($msg[1])"
+    }
+}
+
+if ($enforceBlocks.Count -gt 0) {
+    Write-Output ""
+    Write-Output "Recent enforce blocks (last 5):"
+    $enforceBlocks | Sort-Object TimeCreated -Descending | Select-Object -First 5 | ForEach-Object {
+        $msg = $_.Properties | Select-Object -ExpandProperty Value -ErrorAction SilentlyContinue
+        Write-Output "  [$($_.TimeCreated.ToString('yyyy-MM-dd HH:mm:ss'))] $($msg[1])"
+    }
+}

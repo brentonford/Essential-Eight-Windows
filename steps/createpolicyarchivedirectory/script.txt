@@ -1,9 +1,9 @@
 $archivePath = "{policyExportPath}"
 
 if (Test-Path -Path $archivePath) {
-    Write-Output "Archive directory already exists: $archivePath"
+    Write-Output "Policy archive directory already exists: $archivePath"
     exit 0
 }
 
 New-Item -ItemType Directory -Path $archivePath -Force | Out-Null
-Write-Output "Created archive directory: $archivePath"
+Write-Output "Created policy archive directory: $archivePath"

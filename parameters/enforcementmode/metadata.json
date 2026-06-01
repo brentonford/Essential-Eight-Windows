@@ -1,7 +1,0 @@
-{
-    "externalUuid4": "42d1a43b-d940-4739-8945-0a4794e3ef39", 
-    "key": "enforcementmode", 
-    "name": "Enforcement Mode", 
-    "showInPlan": true, 
-    "type": "c.s.s.b.phv.Text"
-}

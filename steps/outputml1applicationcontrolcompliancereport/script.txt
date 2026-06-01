@@ -1,145 +1,162 @@
-$denyPathsExeRaw         = "{denyPathsExe}"
-$denyPathsScriptRaw      = "{denyPathsScript}"
-$expectedEnforcementMode = "{expectedEnforcementMode}".Trim()
-
 $hostname   = $env:COMPUTERNAME
 $reportDate = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+$os         = Get-CimInstance -ClassName Win32_OperatingSystem
+$isServer   = $os.Caption -match "Windows Server"
 
-function Parse-CsvParameter {
-    param([string]$raw)
+$archivePath        = "{policyExportPath}"
+$policyName         = "E8-ML1-AppControl"
+$policyXmlPath      = Join-Path $archivePath "$policyName.xml"
+$activePoliciesPath = "C:\Windows\System32\CodeIntegrity\CiPolicies\Active"
 
-    $result = @()
-    foreach ($entry in ($raw -split ",")) {
-        $trimmed = $entry.Trim()
-        if ($trimmed -eq "") {
-            continue
-        }
-        $result += $trimmed
-    }
-    return $result
+# --- Deployment check ---
+$xmlExists     = Test-Path $policyXmlPath
+$policyId      = ""
+$binaryDeployed = $false
+
+if ($xmlExists) {
+    [xml]$xml      = Get-Content -Path $policyXmlPath -Raw
+    $policyId      = $xml.SiPolicy.PolicyID
+    $policyIdClean = $policyId -replace '[{}]', ''
+    $binaryDeployed = Test-Path (Join-Path $activePoliciesPath "{$policyIdClean}.cip")
 }
 
-function Get-DenyPathsFromPolicyXml {
-    param([xml]$policyXml, [string]$collectionType)
+$deployedCheck = if ($xmlExists -and $binaryDeployed) { "PASS" } elseif ($xmlExists -and -not $binaryDeployed) { "WARN -- reboot required" } else { "FAIL" }
 
-    $result = @()
-    $xpath = "//RuleCollection[@Type='$collectionType']/FilePathRule[@Action='Deny']/Conditions/FilePathCondition"
-    foreach ($node in $policyXml.SelectNodes($xpath)) {
-        $result += $node.GetAttribute('Path')
-    }
-    return $result
-}
+# --- Enforcement mode check ---
+$umciEnabled  = $false
+$auditEnabled = $false
 
-$svc = Get-Service -Name AppIDSvc -ErrorAction SilentlyContinue
-$startType = if ($null -ne $svc) {
-    (Get-CimInstance -ClassName Win32_Service -Filter "Name='AppIDSvc'").StartMode
-} else {
-    "N/A"
-}
-
-$svcCheck = if ($null -ne $svc -and $svc.Status -eq "Running" -and $startType -eq "Auto") {
-    "PASS"
-} else {
-    "FAIL"
-}
-$effectivePolicy = Get-AppLockerPolicy -Effective -ErrorAction SilentlyContinue
-
-$enforcementCheck     = "FAIL"
-$ruleCount            = 0
-$wrongModeCollections = @()
-$policyXml            = $null
-
-if ($null -ne $effectivePolicy) {
-    $policyXml = [xml]$effectivePolicy.ToXml()
-    $ruleCount = $policyXml.SelectNodes('//RuleCollection/*[@Action]').Count
-
-    $collectionNodes = $policyXml.SelectNodes('//RuleCollection')
-    if ($ruleCount -gt 0 -and $collectionNodes.Count -gt 0) {
-        foreach ($collection in $collectionNodes) {
-            $mode = $collection.GetAttribute('EnforcementMode')
-            $type = $collection.GetAttribute('Type')
-            if ($mode -ne $expectedEnforcementMode) {
-                $wrongModeCollections += "$type=$mode"
-            }
-        }
-        if ($wrongModeCollections.Count -eq 0) {
-            $enforcementCheck = "PASS"
+if ($xmlExists) {
+    $ruleOptions = $xml.SelectNodes("//*[local-name()='Rule']/*[local-name()='Option']")
+    foreach ($opt in $ruleOptions) {
+        switch ($opt.InnerText) {
+            "Enabled:UMCI"       { $umciEnabled  = $true }
+            "Enabled:Audit Mode" { $auditEnabled = $true }
         }
     }
 }
 
-$requiredExePaths    = Parse-CsvParameter -raw $denyPathsExeRaw
-$requiredScriptPaths = Parse-CsvParameter -raw $denyPathsScriptRaw
-
-$exePresent    = @()
-$scriptPresent = @()
-if ($null -ne $policyXml) {
-    $exePresent    = Get-DenyPathsFromPolicyXml -policyXml $policyXml -collectionType 'Exe'
-    $scriptPresent = Get-DenyPathsFromPolicyXml -policyXml $policyXml -collectionType 'Script'
+$modeCheck = if (-not $umciEnabled) {
+    "FAIL -- UMCI not set"
+} elseif ($auditEnabled) {
+    "WARN -- Audit mode (not yet enforcing)"
+} else {
+    "PASS -- Enforce mode"
 }
 
-$missingExe    = @($requiredExePaths    | Where-Object { $_ -notin $exePresent })
-$missingScript = @($requiredScriptPaths | Where-Object { $_ -notin $scriptPresent })
+# --- Path deny rule check ---
+$requiredPaths = @(
+    "%OSDrive%\Users\*\AppData\Local\Temp\*",
+    "%OSDrive%\Users\*\AppData\Local\*",
+    "%OSDrive%\Users\*\AppData\Roaming\*",
+    "%OSDrive%\Users\*\Downloads\*"
+)
 
-$blockRuleCheck = if (($missingExe.Count + $missingScript.Count) -eq 0) { "PASS" } else { "FAIL" }
+$coveredPaths  = @()
+$denyRuleCount = 0
 
-$overallStatus = if ($svcCheck -eq "PASS" -and $enforcementCheck -eq "PASS" -and $blockRuleCheck -eq "PASS") {
-    "COMPLIANT"
-} else {
+if ($xmlExists) {
+    $denyRules = $xml.SelectNodes("//*[local-name()='FilePathRule'][@Action='Deny']")
+    $denyRuleCount = $denyRules.Count
+    foreach ($rule in $denyRules) {
+        $fpNode = $rule.SelectSingleNode("*[local-name()='FileAttributes']/*[local-name()='FilePath']")
+        if ($null -ne $fpNode) {
+            $coveredPaths += $fpNode.GetAttribute("FilePath")
+        }
+    }
+}
+
+$missingPaths = $requiredPaths | Where-Object { $_ -notin $coveredPaths }
+$pathCheck    = if ($missingPaths.Count -eq 0) { "PASS" } else { "FAIL -- $($missingPaths.Count) path(s) missing" }
+
+# --- Event log check ---
+$events = Get-WinEvent -FilterHashtable @{
+    LogName   = "Microsoft-Windows-CodeIntegrity/Operational"
+    Id        = @(3076, 3077, 3089)
+    StartTime = (Get-Date).AddDays(-7)
+} -ErrorAction SilentlyContinue
+
+$auditCount   = @($events | Where-Object { $_.Id -eq 3076 }).Count
+$enforceCount = @($events | Where-Object { $_.Id -eq 3077 }).Count
+$policyCount  = @($events | Where-Object { $_.Id -eq 3089 }).Count
+
+# --- ISM scope ---
+$ismScope   = if ($isServer) { "ML2 Prep (ISM-1490 internet-facing / ISM-1656 non-internet-facing servers)" } else { "ML1 (ISM-0843 workstations + ISM-1870 user-writable path control)" }
+$ismNote    = if ($isServer) { "NOTE: Application control on servers is ML2/ML3. This Blueprint implements ahead of that requirement." } else { "ISM-1870: Blocks execution from user profiles and temp folders." }
+
+# --- Overall status ---
+$failedChecks = @($deployedCheck, $modeCheck, $pathCheck) | Where-Object { $_ -like "FAIL*" }
+$warnChecks   = @($deployedCheck, $modeCheck, $pathCheck) | Where-Object { $_ -like "WARN*" }
+
+$overallStatus = if ($failedChecks.Count -gt 0) {
     "NON-COMPLIANT"
+} elseif ($warnChecks.Count -gt 0) {
+    "COMPLIANT WITH WARNINGS"
+} else {
+    "COMPLIANT"
 }
 
 $separator = "=" * 60
 
 Write-Output $separator
-Write-Output "  ESSENTIAL EIGHT ML1 -- APPLICATION CONTROL"
+Write-Output "  ESSENTIAL EIGHT -- APPLICATION CONTROL (WDAC)"
 Write-Output "  ASD Control: Mitigation Strategy 1"
-Write-Output "  Reference  : cyber.gov.au/essential-eight"
+Write-Output "  Scope: $ismScope"
+Write-Output "  Reference: cyber.gov.au/essential-eight"
 Write-Output $separator
-Write-Output "  Server     : $hostname"
-Write-Output "  Report Date: $reportDate"
-Write-Output "  Generated  : AttuneOps"
+Write-Output "  Endpoint    : $hostname"
+Write-Output "  OS          : $($os.Caption)"
+Write-Output "  Report Date : $reportDate"
+Write-Output "  Generated   : AttuneOps"
 Write-Output $separator
+Write-Output ""
+Write-Output "  $ismNote"
 Write-Output ""
 Write-Output "  CHECKS"
 Write-Output ""
-Write-Output "  [1] Application Identity Service (AppIDSvc)"
-Write-Output "      Status    : $(if ($null -ne $svc) { $svc.Status } else { 'NOT FOUND' })"
-Write-Output "      StartType : $startType"
-Write-Output "      Result    : $svcCheck"
+Write-Output "  [1] Policy Deployed"
+Write-Output "    Archive XML     : $xmlExists"
+Write-Output "    Policy ID       : $policyId"
+Write-Output "    Binary in Active: $binaryDeployed"
+Write-Output "    Result          : $deployedCheck"
 Write-Output ""
-Write-Output "  [2] AppLocker Enforcement Mode"
-Write-Output "      Total rules in policy : $ruleCount"
-Write-Output "      Expected mode         : $expectedEnforcementMode"
-if ($wrongModeCollections.Count -gt 0) {
-    Write-Output "      Actual modes          : $($wrongModeCollections -join ', ')"
-}
-Write-Output "      Result                : $enforcementCheck"
+Write-Output "  [2] Enforcement Mode"
+Write-Output "    UMCI enabled    : $umciEnabled"
+Write-Output "    Audit mode      : $auditEnabled"
+Write-Output "    Result          : $modeCheck"
 Write-Output ""
-Write-Output "  [3] User-Writable Path Block Rules"
-Write-Output "      Exe deny paths found    : $($exePresent.Count)"
-Write-Output "      Script deny paths found : $($scriptPresent.Count)"
-if ($missingExe.Count -gt 0) {
-    Write-Output "      Missing Exe deny rules:"
-    $missingExe | ForEach-Object { Write-Output "        - $_" }
+Write-Output "  [3] Path Deny Rules (ISM-1870)"
+Write-Output "    Deny rules found: $denyRuleCount"
+Write-Output "    Required paths  : $($requiredPaths.Count)"
+Write-Output "    Missing paths   : $($missingPaths.Count)"
+Write-Output "    Result          : $pathCheck"
+if ($missingPaths.Count -gt 0) {
+    $missingPaths | ForEach-Object { Write-Output "      Missing: $_" }
 }
-if ($missingScript.Count -gt 0) {
-    Write-Output "      Missing Script deny rules:"
-    $missingScript | ForEach-Object { Write-Output "        - $_" }
+Write-Output ""
+Write-Output "  [4] WDAC Event Activity (last 7 days)"
+Write-Output "    3076 Audit blocks   : $auditCount"
+Write-Output "    3077 Enforce blocks : $enforceCount"
+Write-Output "    3089 Policy events  : $policyCount"
+if ($policyCount -eq 0 -and -not $binaryDeployed) {
+    Write-Output "    NOTE: No policy events detected -- confirm server has been rebooted."
 }
-if (($missingExe.Count + $missingScript.Count) -eq 0) {
-    Write-Output "      All required paths blocked in both collections."
-}
-Write-Output "      Result : $blockRuleCheck"
 Write-Output ""
 Write-Output $separator
 Write-Output "  OVERALL STATUS : $overallStatus"
 Write-Output $separator
 
 if ($overallStatus -ne "COMPLIANT") {
-    Write-Output "  REMEDIATION: Run the Configure AppLocker Application Control - ML1"
-    Write-Output "  Blueprint against this server to restore compliance."
+    Write-Output ""
+    if ($deployedCheck -like "WARN*") {
+        Write-Output "  ACTION: Reboot the server to activate the deployed WDAC policy."
+    }
+    if ($modeCheck -like "WARN*") {
+        Write-Output "  ACTION: Review Event ID 3076 audit blocks, then re-run Configure"
+        Write-Output "  Blueprint with WDAC Enforcement Mode = 'Enforce' when ready."
+    }
+    if ($pathCheck -like "FAIL*") {
+        Write-Output "  ACTION: Re-run Configure Blueprint to restore missing deny rules."
+    }
     exit 1
 }
-
-exit 0

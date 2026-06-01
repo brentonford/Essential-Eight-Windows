@@ -10,6 +10,17 @@
 #   1. The RDP-Tcp listener setting (direct service configuration)
 #   2. The Group Policy path (survives GPO refresh and is policy-enforceable)
 
+$rdpEnabled = (Get-ItemProperty `
+    -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server" `
+    -Name "fDenyTSConnections" `
+    -ErrorAction SilentlyContinue).fDenyTSConnections -eq 0
+
+if (-not $rdpEnabled) {
+    Write-Output "CHECK NLA : NOT APPLICABLE -- RDP is disabled on this endpoint"
+    Write-Output "RDP should remain disabled on desktop endpoints (server-only service)."
+    exit 0
+}
+
 $rdpTcpPath = "HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp"
 $rdpGpoPath = "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services"
 

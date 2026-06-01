@@ -1,1 +1,0 @@
-Configures Windows AppLocker to meet ASD Essential Eight Maturity Level 1 Application Control requirements. Enables the Application Identity service, applies default allow rules, blocks user-writable path execution, and sets enforcement mode to Enforce. Archives the baseline policy to XML.

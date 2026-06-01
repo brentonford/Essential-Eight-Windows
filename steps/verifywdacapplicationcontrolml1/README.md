@@ -1,0 +1,1 @@
+Audits WDAC application control deployment against ASD Essential Eight application control requirements. Checks policy deployment in the active WDAC directory, enforcement mode, path deny rule coverage, and recent WDAC event log activity. Reports ML1 status for workstations and ML2 prep status for servers.

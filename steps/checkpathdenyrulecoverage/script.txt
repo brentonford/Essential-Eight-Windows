@@ -1,0 +1,51 @@
+# The configure step uses Merge-CIPolicy to generate FilePathRules,
+# then changes Action="Allow" to Action="Deny" via string replacement.
+# This step reads the archive XML and verifies:
+#   1. FilePathRule elements exist with Action="Deny"
+#   2. All four ISM-1870 paths are covered
+
+$archivePath   = "{policyExportPath}"
+$policyName    = "E8-ML1-AppControl"
+$policyXmlPath = Join-Path $archivePath "$policyName.xml"
+
+if (-not (Test-Path $policyXmlPath)) {
+    Write-Output "CHECK Path Deny Rules : SKIP -- policy XML not found"
+    exit 1
+}
+
+$requiredPaths = @(
+    "%OSDrive%\Users\*\AppData\Local\Temp\*",
+    "%OSDrive%\Users\*\AppData\Local\*",
+    "%OSDrive%\Users\*\AppData\Roaming\*",
+    "%OSDrive%\Users\*\Downloads\*"
+)
+
+[xml]$xml = Get-Content -Path $policyXmlPath -Raw
+
+$denyRules = $xml.SelectNodes("//*[local-name()='FilePathRule'][@Action='Deny']")
+
+Write-Output "FilePathRule deny rules found: $($denyRules.Count)"
+Write-Output ""
+
+$coveredPaths = @()
+foreach ($rule in $denyRules) {
+    $fpNode = $rule.SelectSingleNode("*[local-name()='FileAttributes']/*[local-name()='FilePath']")
+    if ($null -eq $fpNode) {
+        continue
+    }
+    $path = $fpNode.GetAttribute("FilePath")
+    $coveredPaths += $path
+    Write-Output "Deny rule : $($rule.GetAttribute('Id'))  $path"
+}
+
+Write-Output ""
+
+$missingPaths = $requiredPaths | Where-Object { $_ -notin $coveredPaths }
+
+if ($missingPaths.Count -eq 0) {
+    Write-Output "CHECK Path Deny Rules : PASS -- all ISM-1870 paths covered"
+} else {
+    Write-Output "CHECK Path Deny Rules : FAIL -- $($missingPaths.Count) required path(s) missing:"
+    $missingPaths | ForEach-Object { Write-Output "  Missing: $_" }
+    exit 1
+}
