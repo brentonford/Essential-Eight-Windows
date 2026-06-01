@@ -1,0 +1,135 @@
+$hostname   = $env:COMPUTERNAME
+$reportDate = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+
+# NLA check
+$rdpTcpPath = "HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp"
+$rdpGpoPath = "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services"
+$tcpNla     = (Get-ItemProperty -Path $rdpTcpPath -Name "UserAuthentication" -ErrorAction SilentlyContinue).UserAuthentication
+$gpoNla     = (Get-ItemProperty -Path $rdpGpoPath -Name "UserAuthentication" -ErrorAction SilentlyContinue).UserAuthentication
+$nlaCheck   = if ($tcpNla -eq 1 -or $gpoNla -eq 1) { "PASS" } else { "FAIL" }
+
+# Lockout check — null-safe parse
+$seceditExport = "$env:TEMP\secpol_report_mfa.cfg"
+secedit /export /cfg $seceditExport /quiet
+$content = Get-Content $seceditExport -ErrorAction SilentlyContinue
+
+$getSeceditValue = {
+    param([string]$key)
+    $line = $content | Where-Object { $_ -match "^$key\s*=" }
+    if ($null -eq $line -or $line.Count -eq 0) { return "Not set" }
+    ($line -split '=')[1].Trim()
+}
+
+$lockoutCount = & $getSeceditValue "LockoutBadCount"
+$lockoutDur   = & $getSeceditValue "LockoutDuration"
+Remove-Item $seceditExport -Force -ErrorAction SilentlyContinue
+
+$lockoutCheck = if (
+    $lockoutCount -ne "Not set" -and $lockoutDur -ne "Not set" -and
+    [int]$lockoutCount -le 5 -and [int]$lockoutCount -gt 0 -and
+    [int]$lockoutDur -ge 30
+) { "PASS" } else { "FAIL" }
+
+# WinRM check
+$isDisabled = {
+    param($val)
+    $null -eq $val -or $val -in @("false", $false, "False")
+}
+
+$basicDisabled  = & $isDisabled $basicAuth
+$digestDisabled = & $isDisabled $digestAuth
+$ntlmHardened   = [int]$lmLevel -ge 3 -and $noLmHash -eq 1
+
+Write-Output "Basic disabled  : $basicDisabled"
+Write-Output "Digest disabled : $digestDisabled (null treated as disabled)"
+
+$winrmCheck = if ($basicDisabled -and $digestDisabled -and $ntlmHardened) { "PASS" } else { "FAIL" }
+
+# Audit check
+$logonAudit = auditpol /get /subcategory:"Logon" 2>&1 | Where-Object { $_ -match "Logon" }
+$auditCheck = if ($logonAudit -match "Success and Failure") { "PASS" } else { "FAIL" }
+
+# MFA provider
+$mfaPaths    = @("$env:ProgramFiles\Duo Security Authentication Proxy", "$env:ProgramFiles\Microsoft\AzureMfa")
+$mfaDetected = $mfaPaths | Where-Object { Test-Path $_ }
+$mfaStatus   = if ($mfaDetected) { "DETECTED" } else { "Not detected" }
+
+# Overall
+$techChecks  = @($nlaCheck, $lockoutCheck, $winrmCheck, $auditCheck)
+$techStatus  = if ($techChecks -contains "FAIL") { "TECHNICAL GAPS -- see details" } else { "TECHNICAL PREREQUISITES MET" }
+
+$separator = "=" * 60
+
+Write-Output $separator
+Write-Output "  ESSENTIAL EIGHT ML1 -- MULTI-FACTOR AUTHENTICATION"
+Write-Output "  ASD Control: Mitigation Strategy 7"
+Write-Output "  ISM Controls: 1401, 1504, 1679, 1680"
+Write-Output "  Reference  : cyber.gov.au/essential-eight"
+Write-Output $separator
+Write-Output "  Server     : $hostname"
+Write-Output "  Report Date: $reportDate"
+Write-Output "  Generated  : AttuneOps"
+Write-Output $separator
+Write-Output ""
+Write-Output "  IMPORTANT SCOPE NOTE"
+Write-Output "  ML1 MFA controls (ISM-1504, ISM-1679, ISM-1680) apply to ONLINE SERVICES."
+Write-Output "  MFA for on-premises system authentication (RDP/WinRM) is an ML2 requirement."
+Write-Output "  This report covers server-side prerequisites and ML1 enablers."
+Write-Output ""
+Write-Output "  SERVER-SIDE PREREQUISITE CHECKS"
+Write-Output ""
+Write-Output "  [NLA] Network Level Authentication for RDP"
+Write-Output "    RDP-Tcp UserAuthentication : $tcpNla"
+Write-Output "    GPO UserAuthentication     : $gpoNla"
+Write-Output "    Result                     : $nlaCheck"
+Write-Output ""
+Write-Output "  [Lockout] Account Lockout Policy"
+Write-Output "    LockoutBadCount  : $lockoutCount (required: <= 5)"
+Write-Output "    LockoutDuration  : $lockoutDur min (required: >= 30)"
+Write-Output "    Result           : $lockoutCheck"
+Write-Output ""
+Write-Output "  [WinRM] Authentication Hardening"
+Write-Output "    Basic auth disabled  : $($basicAuth -eq 'false' -or $basicAuth -eq $false)"
+Write-Output "    LmCompatibilityLevel : $lmLevel (required: >= 3)"
+Write-Output "    NoLMHash             : $noLmHash (required: 1)"
+Write-Output "    Result               : $winrmCheck"
+Write-Output ""
+Write-Output "  [Audit] Authentication Logging"
+Write-Output "    Logon Success+Failure : $($logonAudit -match 'Success and Failure')"
+Write-Output "    Result                : $auditCheck"
+Write-Output ""
+Write-Output "  [MFA Provider] Third-Party MFA Integration"
+Write-Output "    Status : $mfaStatus"
+Write-Output ""
+Write-Output "  TECHNICAL STATUS : $techStatus"
+Write-Output ""
+Write-Output $separator
+Write-Output "  IDENTITY PLATFORM VERIFICATION CHECKLIST (ISM-1504, ISM-1679, ISM-1680)"
+Write-Output "  The following checks CANNOT be verified from this server."
+Write-Output "  Complete these in your organisation's identity platform (Entra ID, Okta, etc.)"
+Write-Output $separator
+Write-Output ""
+Write-Output "  [ ] ISM-1504: MFA is enforced for all users authenticating to your"
+Write-Output "      organisation's online services that process sensitive data."
+Write-Output "      Where to check: Entra ID > Conditional Access > Policies"
+Write-Output "                      OR your identity provider's MFA enforcement policy"
+Write-Output ""
+Write-Output "  [ ] ISM-1401: The MFA method used meets the 'something you have +"
+Write-Output "      something you know (or are)' definition."
+Write-Output "      Acceptable: Authenticator app + password, hardware token + PIN"
+Write-Output "      Where to check: Entra ID > Authentication Methods > Policies"
+Write-Output ""
+Write-Output "  [ ] ISM-1679: MFA is enforced for third-party online services that"
+Write-Output "      process your organisation's sensitive data."
+Write-Output "      Where to check: Each third-party service's MFA/security settings"
+Write-Output ""
+Write-Output "  [ ] ISM-1680: MFA (where available) is used for third-party online"
+Write-Output "      services that process non-sensitive organisational data."
+Write-Output "      Where to check: Third-party service admin consoles"
+Write-Output ""
+Write-Output "  Attach completed checklist evidence to this report to close ML1 MFA."
+Write-Output $separator
+
+if ($techStatus -ne "TECHNICAL PREREQUISITES MET") {
+    exit 1
+}

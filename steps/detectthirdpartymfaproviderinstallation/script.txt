@@ -1,0 +1,60 @@
+# Informational step: checks for the presence of common MFA providers
+# that would integrate with Windows Server RDP/WinRM authentication.
+# Does not install or configure any MFA provider.
+#
+# Detection of an MFA provider indicates progress toward ISM-0974/ISM-1173
+# (ML2 requirement: MFA for privileged/unprivileged users of systems).
+
+$mfaProviders = @(
+    @{
+        Name        = "Duo Security Authentication Proxy"
+        TestPath    = "$env:ProgramFiles\Duo Security Authentication Proxy"
+        RegPath     = "HKLM:\SOFTWARE\Duo Security"
+    },
+    @{
+        Name        = "Microsoft Azure MFA NPS Extension"
+        TestPath    = "$env:ProgramFiles\Microsoft\AzureMfa"
+        RegPath     = "HKLM:\SOFTWARE\Microsoft\AzureMfa"
+    },
+    @{
+        Name        = "Windows Hello for Business (GPO)"
+        TestPath    = $null
+        RegPath     = "HKLM:\SOFTWARE\Policies\Microsoft\PassportForWork"
+    },
+    @{
+        Name        = "Network Policy Server (NPS Role)"
+        TestPath    = $null
+        RegPath     = "HKLM:\SYSTEM\CurrentControlSet\Services\IAS"
+    }
+)
+
+Write-Output "Third-party MFA provider detection:"
+Write-Output ""
+
+$detected = @()
+
+foreach ($provider in $mfaProviders) {
+    $found = $false
+
+    if ($null -ne $provider.TestPath -and (Test-Path $provider.TestPath)) {
+        $found = $true
+    }
+    if (-not $found -and $null -ne $provider.RegPath -and (Test-Path $provider.RegPath)) {
+        $found = $true
+    }
+
+    $status = if ($found) { "DETECTED" } else { "Not found" }
+    Write-Output "  $($provider.Name) : $status"
+
+    if ($found) { $detected += $provider.Name }
+}
+
+Write-Output ""
+if ($detected.Count -gt 0) {
+    Write-Output "MFA provider(s) detected: $($detected -join ', ')"
+    Write-Output "Verify that the detected provider is actively enforcing MFA for RDP sessions."
+} else {
+    Write-Output "No MFA provider detected on this server."
+    Write-Output "For ML2 compliance (ISM-0974/ISM-1173), install and configure a RADIUS/NPS MFA"
+    Write-Output "integration such as Duo Security or the Azure MFA NPS Extension."
+}

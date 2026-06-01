@@ -1,0 +1,34 @@
+$seceditExport = "$env:TEMP\secpol_lockout_verify.cfg"
+secedit /export /cfg $seceditExport /quiet
+
+$content = Get-Content $seceditExport
+
+$getValue = {
+    param([string]$key)
+    $line = $content | Where-Object { $_ -match "^$key\s*=" }
+    if ($line) { ($line -split '=')[1].Trim() } else { "Not set" }
+}
+
+$lockoutCount    = & $getValue "LockoutBadCount"
+$lockoutDuration = & $getValue "LockoutDuration"
+$resetCount      = & $getValue "ResetLockoutCount"
+
+Remove-Item $seceditExport -Force -ErrorAction SilentlyContinue
+
+Write-Output "Account lockout policy:"
+Write-Output "  LockoutBadCount   : $lockoutCount  (required: <= 5)"
+Write-Output "  LockoutDuration   : $lockoutDuration minutes  (required: >= 30)"
+Write-Output "  ResetLockoutCount : $resetCount minutes  (required: >= 30)"
+
+$lockoutOk = (
+    [int]$lockoutCount    -le 5 -and [int]$lockoutCount    -gt 0 -and
+    [int]$lockoutDuration -ge 30 -and
+    [int]$resetCount      -ge 30
+)
+
+Write-Output ""
+Write-Output "CHECK Account Lockout : $(if ($lockoutOk) { 'PASS' } else { 'FAIL — policy does not meet recommended values' })"
+
+if (!$lockoutOk) {
+    exit 1
+}

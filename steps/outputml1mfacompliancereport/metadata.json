@@ -1,0 +1,16 @@
+{
+    "actionOnStepFail": "continue", 
+    "enabled": true, 
+    "externalUuid4": "873c5d19-291c-411c-b2ff-12ff3d181bef", 
+    "interpreter": 2, 
+    "interpreterCommand": null, 
+    "interpreterScriptExt": null, 
+    "interpreterScriptSyntax": null, 
+    "key": "outputml1mfacompliancereport", 
+    "name": "Output ML1 MFA Compliance Report", 
+    "osCredKey": "windowscredential", 
+    "serverKey": "windowsserver", 
+    "successExitCode": 0, 
+    "timeout": 60, 
+    "type": "com.servertribe.attune.tuples.StepWinRmTuple"
+}

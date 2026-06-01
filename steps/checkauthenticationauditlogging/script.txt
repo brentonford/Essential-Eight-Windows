@@ -1,0 +1,45 @@
+$requiredSubcategories = @(
+    "Logon",
+    "Account Lockout",
+    "Credential Validation"
+)
+
+$failCount = 0
+
+foreach ($sub in $requiredSubcategories) {
+    $result = auditpol /get /subcategory:"$sub" 2>&1
+    $line   = $result | Where-Object { $_ -match $sub }
+
+    if (-not $line) {
+        Write-Output "WARN  $sub : could not read audit setting"
+        continue
+    }
+
+    if ($line -match "Success and Failure") {
+        Write-Output "PASS  $sub : Success and Failure"
+        continue
+    }
+
+    Write-Output "FAIL  $sub : $(($line -split '\s{2,}')[-1].Trim())"
+    $failCount++
+}
+
+# Check Security log size
+$regPath  = "HKLM:\SYSTEM\CurrentControlSet\Services\EventLog\Security"
+$maxSize  = (Get-ItemProperty -Path $regPath -Name "MaxSize" -ErrorAction SilentlyContinue).MaxSize
+$maxSizeMb = if ($null -ne $maxSize) { [math]::Round($maxSize / 1MB) } else { 0 }
+Write-Output ""
+Write-Output "Security log maximum size : ${maxSizeMb}MB (recommended: >= 256MB)"
+
+$logSizeOk = $maxSizeMb -ge 256
+if (-not $logSizeOk) {
+    Write-Output "WARN: Security log size below 256MB — authentication history may be lost before scheduled reviews."
+    $failCount++
+}
+
+Write-Output ""
+Write-Output "CHECK Auth Audit Logging : $(if ($failCount -eq 0) { 'PASS' } else { "FAIL — $failCount item(s) need attention" })"
+
+if ($failCount -ne 0) {
+    exit 1
+}

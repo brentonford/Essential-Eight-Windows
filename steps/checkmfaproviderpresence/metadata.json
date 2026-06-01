@@ -1,0 +1,16 @@
+{
+    "actionOnStepFail": "continue", 
+    "enabled": true, 
+    "externalUuid4": "ecdf65c8-9d8a-44ca-baf9-a18dd1cd919c", 
+    "interpreter": 2, 
+    "interpreterCommand": null, 
+    "interpreterScriptExt": null, 
+    "interpreterScriptSyntax": null, 
+    "key": "checkmfaproviderpresence", 
+    "name": "Check MFA Provider Presence", 
+    "osCredKey": "windowscredential", 
+    "serverKey": "windowsserver", 
+    "successExitCode": 0, 
+    "timeout": 60, 
+    "type": "com.servertribe.attune.tuples.StepWinRmTuple"
+}

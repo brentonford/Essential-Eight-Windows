@@ -1,0 +1,16 @@
+{
+    "actionOnStepFail": "continue", 
+    "enabled": true, 
+    "externalUuid4": "43d3ec8f-3832-4e29-b7ca-3edb484e7968", 
+    "interpreter": 2, 
+    "interpreterCommand": null, 
+    "interpreterScriptExt": null, 
+    "interpreterScriptSyntax": null, 
+    "key": "checkwinrmauthenticationconfiguration", 
+    "name": "Check WinRM Authentication Configuration", 
+    "osCredKey": "windowscredential", 
+    "serverKey": "windowsserver", 
+    "successExitCode": 0, 
+    "timeout": 60, 
+    "type": "com.servertribe.attune.tuples.StepWinRmTuple"
+}

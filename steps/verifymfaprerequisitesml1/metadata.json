@@ -1,0 +1,30 @@
+{
+    "actionOnStepFail": "stop", 
+    "concurrency": 1, 
+    "enabled": true, 
+    "externalUuid4": "de4b7961-dcbd-4c55-ab7d-e654aaf88d0a", 
+    "isBlueprint": true, 
+    "key": "verifymfaprerequisitesml1", 
+    "links": [
+        {
+            "stepKey": "checknetworklevelauthenticationstatus"
+        }, 
+        {
+            "stepKey": "checkaccountlockoutpolicy"
+        }, 
+        {
+            "stepKey": "checkwinrmauthenticationconfiguration"
+        }, 
+        {
+            "stepKey": "checkauthenticationauditlogging"
+        }, 
+        {
+            "stepKey": "checkmfaproviderpresence"
+        }, 
+        {
+            "stepKey": "outputml1mfacompliancereport"
+        }
+    ], 
+    "name": "Verify MFA Prerequisites - ML1", 
+    "type": "com.servertribe.attune.tuples.StepGroupTuple"
+}

@@ -1,0 +1,38 @@
+$basicAuth    = (Get-Item -Path "WSMan:\localhost\Service\Auth\Basic"    -ErrorAction SilentlyContinue).Value
+$digestAuth   = (Get-Item -Path "WSMan:\localhost\Service\Auth\Digest"   -ErrorAction SilentlyContinue).Value
+$kerberosAuth = (Get-Item -Path "WSMan:\localhost\Service\Auth\Kerberos" -ErrorAction SilentlyContinue).Value
+$negotiateAuth= (Get-Item -Path "WSMan:\localhost\Service\Auth\Negotiate"-ErrorAction SilentlyContinue).Value
+
+$lmLevel      = (Get-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Lsa" -Name "LmCompatibilityLevel" -ErrorAction SilentlyContinue).LmCompatibilityLevel
+$noLmHash     = (Get-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Lsa" -Name "NoLMHash" -ErrorAction SilentlyContinue).NoLMHash
+
+Write-Output "WinRM authentication methods:"
+Write-Output "  Basic     : $basicAuth    (required: false)"
+Write-Output "  Digest    : $digestAuth   (required: false)"
+Write-Output "  Kerberos  : $kerberosAuth (required: true)"
+Write-Output "  Negotiate : $negotiateAuth"
+Write-Output ""
+Write-Output "NTLM hardening:"
+Write-Output "  LmCompatibilityLevel : $lmLevel (required: >= 3, recommended: 5)"
+Write-Output "  NoLMHash             : $noLmHash (required: 1)"
+
+$isDisabled = {
+    param($val)
+    $null -eq $val -or $val -in @("false", $false, "False")
+}
+
+$basicDisabled  = & $isDisabled $basicAuth
+$digestDisabled = & $isDisabled $digestAuth
+$ntlmHardened   = [int]$lmLevel -ge 3 -and $noLmHash -eq 1
+
+Write-Output "Basic disabled  : $basicDisabled"
+Write-Output "Digest disabled : $digestDisabled (null treated as disabled)"
+
+$winrmCheck = if ($basicDisabled -and $digestDisabled -and $ntlmHardened) { "PASS" } else { "FAIL" }
+
+Write-Output ""
+Write-Output "CHECK WinRM Auth : $winrmCheck"
+
+if ($winrmCheck -ne "PASS") {
+    exit 1
+}

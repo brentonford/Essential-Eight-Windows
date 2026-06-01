@@ -1,0 +1,32 @@
+# Account lockout is the primary brute-force mitigation for accounts
+# that do not yet have MFA protecting them. ISM-1401 requires MFA using
+# something-you-have + something-you-know. Until MFA is in place,
+# lockout limits the value of stolen credentials.
+#
+# ASD-recommended values:
+#   LockoutBadCount     : 5 failed attempts trigger lockout
+#   LockoutDuration     : 30 minutes (1800 seconds / secedit value in minutes)
+#   ResetLockoutCount   : 30-minute observation window
+
+$seceditExport = "$env:TEMP\secpol_lockout.cfg"
+$seceditDb     = "$env:TEMP\secpol_lockout.sdb"
+$seceditImport = "$env:TEMP\secpol_lockout_new.cfg"
+
+secedit /export /cfg $seceditExport /quiet
+
+$content = Get-Content $seceditExport
+
+$content = $content -replace 'LockoutBadCount\s*=\s*\d+',   'LockoutBadCount = 5'
+$content = $content -replace 'LockoutDuration\s*=\s*\d+',   'LockoutDuration = 30'
+$content = $content -replace 'ResetLockoutCount\s*=\s*\d+', 'ResetLockoutCount = 30'
+
+$content | Set-Content $seceditImport
+
+secedit /configure /db $seceditDb /cfg $seceditImport /quiet
+
+Remove-Item $seceditExport, $seceditImport, $seceditDb -Force -ErrorAction SilentlyContinue
+
+Write-Output "Account lockout policy applied:"
+Write-Output "  LockoutBadCount   : 5 failed attempts"
+Write-Output "  LockoutDuration   : 30 minutes"
+Write-Output "  ResetLockoutCount : 30-minute observation window"

@@ -1,0 +1,37 @@
+# Authentication event logs are required evidence for MFA compliance verification.
+# An assessor checking ISM-1504 will want to see that authentication events
+# (both successful and failed) are being captured.
+#
+# Key event IDs produced by these audit policies:
+#   4624: Successful logon
+#   4625: Failed logon
+#   4648: Logon using explicit credentials (RDP, RunAs)
+#   4740: Account locked out
+#   4776: NTLM credential validation (domain controller / local SAM)
+
+$auditSettings = @(
+    @{ Subcategory = "Logon";                  Setting = "success,failure" },
+    @{ Subcategory = "Logoff";                 Setting = "success" },
+    @{ Subcategory = "Account Lockout";        Setting = "success,failure" },
+    @{ Subcategory = "Credential Validation";  Setting = "success,failure" },
+    @{ Subcategory = "Other Logon/Logoff Events"; Setting = "success,failure" }
+)
+
+foreach ($entry in $auditSettings) {
+    auditpol /set /subcategory:"$($entry.Subcategory)" /success:enable /failure:enable | Out-Null
+    Write-Output "Audit set: $($entry.Subcategory) — $($entry.Setting)"
+}
+
+# Increase Security event log size to retain authentication history
+$regPath = "HKLM:\SYSTEM\CurrentControlSet\Services\EventLog\Security"
+if (Test-Path $regPath) {
+    # Set maximum log size to 256MB (268435456 bytes)
+    Set-ItemProperty -Path $regPath -Name "MaxSize" -Value 268435456 -Type DWord
+    # Set retention to overwrite as needed (0 = overwrite oldest)
+    Set-ItemProperty -Path $regPath -Name "Retention" -Value 0 -Type DWord
+    Write-Output ""
+    Write-Output "Security event log: maximum size set to 256MB, retention set to overwrite."
+}
+
+Write-Output ""
+Write-Output "Authentication audit logging enabled."

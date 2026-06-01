@@ -1,0 +1,46 @@
+# NLA requires authentication before a full RDP session is established.
+# This is a prerequisite for third-party MFA integration (Duo, Azure NPS Extension)
+# and reduces the attack surface of the RDP service.
+#
+# NLA is NOT MFA. It is pre-authentication using Windows credentials.
+# Combined with a RADIUS/NPS MFA provider, NLA + MFA meets ISM-1401
+# for RDP-based administrative access (required at ML2, recommended at ML1).
+#
+# Two registry paths are set:
+#   1. The RDP-Tcp listener setting (direct service configuration)
+#   2. The Group Policy path (survives GPO refresh and is policy-enforceable)
+
+$rdpTcpPath = "HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp"
+$rdpGpoPath = "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services"
+
+# Path 1: RDP-Tcp service configuration
+if (Test-Path $rdpTcpPath) {
+    # UserAuthentication = 1: Require NLA (pre-session authentication)
+    Set-ItemProperty -Path $rdpTcpPath -Name "UserAuthentication" -Value 1 -Type DWord
+    # SecurityLayer = 2: Require TLS (SSL) for RDP session encryption
+    # 0 = RDP native, 1 = Negotiate TLS, 2 = Require TLS
+    Set-ItemProperty -Path $rdpTcpPath -Name "SecurityLayer" -Value 2 -Type DWord
+    Write-Output "RDP-Tcp: NLA enabled (UserAuthentication = 1)"
+    Write-Output "RDP-Tcp: Security layer set to TLS required (SecurityLayer = 2)"
+}
+
+# Path 2: Group Policy path (policy-enforced, survives GPO refresh)
+if (-not (Test-Path $rdpGpoPath)) {
+    New-Item -Path $rdpGpoPath -Force | Out-Null
+}
+Set-ItemProperty -Path $rdpGpoPath -Name "UserAuthentication"  -Value 1 -Type DWord
+Set-ItemProperty -Path $rdpGpoPath -Name "SecurityLayer"       -Value 2 -Type DWord
+Set-ItemProperty -Path $rdpGpoPath -Name "fDenyTSConnections"  -Value 0 -Type DWord
+Write-Output "GPO path: NLA and TLS requirement set"
+
+# Restart Remote Desktop Services to apply changes
+$rdsService = Get-Service -Name TermService -ErrorAction SilentlyContinue
+if ($null -ne $rdsService) {
+    Restart-Service -Name TermService -Force
+    Write-Output "Remote Desktop Services restarted to apply NLA configuration."
+}
+
+Write-Output ""
+Write-Output "NLA configuration applied."
+Write-Output "NOTE: NLA is a prerequisite for MFA integration, not MFA itself."
+Write-Output "To achieve RDP MFA, integrate a RADIUS/NPS MFA provider (Duo, Azure NPS Extension)."
