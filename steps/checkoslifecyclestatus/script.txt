@@ -27,7 +27,7 @@ $lifecycleTable = @(
     @{ Build = 22631; Name = "Windows 11 23H2"; ExtendedEnd = "2025-11-11"; Status = "END OF LIFE" },
     @{ Build = 22621; Name = "Windows 11 22H2"; ExtendedEnd = "2024-10-08"; Status = "END OF LIFE" },
     @{ Build = 19045; Name = "Windows 10 22H2"; ExtendedEnd = "2025-10-14"; Status = "END OF LIFE" },
-    @{ Build = 19044; Name = "Windows 10 21H2"; ExtendedEnd = "2024-06-11"; Status = "END OF LIFE" },
+    @{ Build = 19044; Name = "Windows 10 21H2"; ExtendedEnd = "2024-06-11"; Status = "END OF LIFE" }
 )
 
 $match = $lifecycleTable | Where-Object { $_.Build -eq $buildNumber }
@@ -36,7 +36,7 @@ if ($null -eq $match) {
     Write-Output "WARN: OS build $buildNumber not found in lifecycle table."
     Write-Output "Verify support status manually at docs.microsoft.com/lifecycle"
     Write-Output "Continuing — treat as supported until confirmed otherwise."
-    exit 0
+    exit 1
 }
 
 Write-Output "Matched lifecycle entry  : $($match.Name)"

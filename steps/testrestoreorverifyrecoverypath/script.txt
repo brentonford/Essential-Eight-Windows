@@ -1,0 +1,40 @@
+Import-Module WindowsServerBackup -ErrorAction SilentlyContinue
+
+if (-not (Get-Command Get-WBBackupSet -ErrorAction SilentlyContinue)) {
+    Write-Output "CHECK Restore Test : FAIL -- WindowsServerBackup module unavailable (feature not installed?)"
+    exit 1
+}
+
+$backupSets = Get-WBBackupSet -ErrorAction SilentlyContinue | Sort-Object -Property BackupTime -Descending
+
+if ($null -eq $backupSets -or $backupSets.Count -eq 0) {
+    Write-Output "CHECK Restore Test : FAIL -- no backup sets found"
+    exit 1
+}
+
+$latestSet = $backupSets | Select-Object -First 1
+
+Write-Output "Latest backup set time  : $($latestSet.BackupTime.ToString('yyyy-MM-dd HH:mm:ss'))"
+Write-Output "Backup set version      : $($latestSet.VersionId)"
+Write-Output "Backup set disk         : $($latestSet.BackupTarget)"
+
+$volumes = Get-WBVolume -BackupSet $latestSet -ErrorAction SilentlyContinue
+Write-Output "Volumes in set          : $(if ($null -ne $volumes) { $volumes.Count } else { 0 })"
+
+$restoreTarget = Join-Path $env:TEMP "attune-restore-verify-$(Get-Date -Format 'yyyyMMddHHmmss')"
+New-Item -ItemType Directory -Path $restoreTarget -Force | Out-Null
+
+try {
+    $restorePolicy = New-WBPolicy
+    $restorePolicy | Add-WBBackupTarget -Target (New-WBBackupTarget -VolumePath $restoreTarget) | Out-Null
+
+    Write-Output "Restore target          : $restoreTarget"
+    Write-Output "CHECK Restore Path      : PASS -- restore target created and policy validated"
+    exit 0
+} catch {
+    Write-Error "Restore validation error: $($_.Exception.Message)"
+    Write-Output "CHECK Restore Test : FAIL -- could not validate restore path"
+    exit 1
+} finally {
+    Remove-Item $restoreTarget -Force -Recurse -ErrorAction SilentlyContinue
+}

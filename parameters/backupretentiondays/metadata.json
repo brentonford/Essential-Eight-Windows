@@ -1,0 +1,7 @@
+{
+    "externalUuid4": "93b92616-ac57-491d-a87a-9042ba5ca7f8", 
+    "key": "backupretentiondays", 
+    "name": "Backup Retention Days", 
+    "showInPlan": true, 
+    "type": "c.s.s.b.phv.Text"
+}

@@ -1,0 +1,5 @@
+$os       = Get-CimInstance -ClassName Win32_OperatingSystem
+$isServer = $os.Caption -match "Windows Server"
+
+Write-Output "OS Caption : $($os.Caption)"
+Write-Output "Backup path: $(if ($isServer) { 'Windows Server Backup' } else { 'Desktop Sync Verification' })"

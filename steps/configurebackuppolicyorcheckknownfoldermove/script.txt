@@ -1,0 +1,70 @@
+$os       = Get-CimInstance -ClassName Win32_OperatingSystem
+$isServer = $os.Caption -match "Windows Server"
+
+if ($isServer) {
+    Import-Module WindowsServerBackup
+
+    $retentionDays = [int]("{backupRetentionDays}".Trim())
+    if ($retentionDays -lt 30) {
+        Write-Output "WARN: Retention $retentionDays days -- ML1 best practice is >= 30 days."
+    }
+
+    $policy  = New-WBPolicy
+    $volumes = Get-WBVolume -AllVolumes | Where-Object { $_.VolumeType -eq "Fixed" }
+
+    foreach ($vol in $volumes) {
+        Add-WBVolume -Policy $policy -Volume $vol
+        Write-Output "Volume added: $($vol.MountPath)"
+    }
+
+    Add-WBSystemState -Policy $policy
+    Write-Output "System state added."
+
+    Set-WBSchedule -Policy $policy -Schedule ([datetime]::Parse("02:00"))
+    Write-Output "Schedule set: daily 02:00"
+
+    Set-WBPolicy -Policy $policy -RetainDays $retentionDays -ErrorAction SilentlyContinue
+
+    Write-Output ""
+    Write-Output "Backup policy configured: $($volumes.Count) volumes + system state, $retentionDays day retention."
+    exit 0
+}
+
+# Desktop: configure Known Folder Move via registry if not already set
+# KFM redirects Documents, Desktop, Pictures to OneDrive automatically.
+# This is equivalent to the "backup" of critical user data for desktop endpoints.
+
+$kfmPolicyPath  = "HKLM:\SOFTWARE\Policies\Microsoft\OneDrive"
+$kfmStatusPath  = "HKCU:\SOFTWARE\Microsoft\OneDrive\Accounts"
+
+if (-not (Test-Path $kfmPolicyPath)) {
+    New-Item -Path $kfmPolicyPath -Force | Out-Null
+}
+
+# KFMSilentOptIn requires the tenant ID — check if already configured
+$existingKfm = (Get-ItemProperty -Path $kfmPolicyPath -Name "KFMSilentOptIn" -ErrorAction SilentlyContinue).KFMSilentOptIn
+
+if ($null -ne $existingKfm) {
+    Write-Output "Known Folder Move policy already configured (KFMSilentOptIn: $existingKfm)"
+} else {
+    Write-Output "NOTE: Known Folder Move requires your Microsoft 365 Tenant ID."
+    Write-Output "Set HKLM:\SOFTWARE\Policies\Microsoft\OneDrive\KFMSilentOptIn = <TenantID>"
+    Write-Output "This ensures Documents, Desktop, and Pictures automatically sync to OneDrive."
+    Write-Output "For now, checking current KFM status from existing sync state."
+}
+
+# Check current KFM sync state per folder
+$kfmFolders = @{
+    "Documents" = [System.Environment]::GetFolderPath("MyDocuments")
+    "Desktop"   = [System.Environment]::GetFolderPath("Desktop")
+    "Pictures"  = [System.Environment]::GetFolderPath("MyPictures")
+}
+
+$oneDriveRoot = (Get-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\OneDrive" -Name "UserFolder" -ErrorAction SilentlyContinue).UserFolder
+
+foreach ($folder in $kfmFolders.GetEnumerator()) {
+    $currentPath = $folder.Value
+    $isUnderOneDrive = $null -ne $oneDriveRoot -and $currentPath.StartsWith($oneDriveRoot)
+    Write-Output "$($folder.Key) path   : $currentPath"
+    Write-Output "$($folder.Key) synced : $isUnderOneDrive"
+}

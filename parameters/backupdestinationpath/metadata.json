@@ -1,0 +1,7 @@
+{
+    "externalUuid4": "1525b52f-c5ab-463c-8116-8ad454aef58f", 
+    "key": "backupdestinationpath", 
+    "name": "Backup Destination Path", 
+    "showInPlan": true, 
+    "type": "c.s.s.b.phv.Text"
+}

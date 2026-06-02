@@ -1,0 +1,50 @@
+$os       = Get-CimInstance -ClassName Win32_OperatingSystem
+$isServer = $os.Caption -match "Windows Server"
+
+if ($isServer) {
+    $featureName = "Windows-Server-Backup"
+    $feature     = Get-WindowsFeature -Name $featureName
+
+    if ($feature.InstallState -eq "Installed") {
+        Write-Output "Windows Server Backup feature is already installed."
+        exit 0
+    }
+
+    Write-Output "Installing Windows Server Backup feature..."
+    Install-WindowsFeature -Name $featureName -IncludeManagementTools
+
+    $feature = Get-WindowsFeature -Name $featureName
+    if ($feature.InstallState -ne "Installed") {
+        Write-Error "Windows Server Backup installation failed."
+        exit 1
+    }
+
+    Write-Output "Windows Server Backup installed successfully."
+    exit 0
+}
+
+# Desktop: verify OneDrive sync client
+$oneDrivePaths = @(
+    "$env:LOCALAPPDATA\Microsoft\OneDrive\OneDrive.exe",
+    "$env:ProgramFiles\Microsoft OneDrive\OneDrive.exe",
+    "${env:ProgramFiles(x86)}\Microsoft OneDrive\OneDrive.exe"
+)
+
+$oneDriveExe = $oneDrivePaths | Where-Object { Test-Path $_ } | Select-Object -First 1
+
+if ($null -eq $oneDriveExe) {
+    Write-Output "WARN: OneDrive client not found on this desktop."
+    Write-Output "Install OneDrive and configure Known Folder Move to meet ISM-1511 on this endpoint."
+    exit 0
+}
+
+Write-Output "OneDrive client found: $oneDriveExe"
+
+# Check if OneDrive process is running
+$oneDriveProcess = Get-Process -Name OneDrive -ErrorAction SilentlyContinue
+if ($null -ne $oneDriveProcess) {
+    Write-Output "OneDrive process is running (PID: $($oneDriveProcess.Id))"
+} else {
+    Write-Output "WARN: OneDrive client is installed but not running."
+    Write-Output "Start OneDrive and sign in with a work or school account."
+}

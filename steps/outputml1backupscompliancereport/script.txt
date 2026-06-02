@@ -1,0 +1,76 @@
+$hostname        = $env:COMPUTERNAME
+$reportDate      = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+$destinationPath = "{backupDestinationPath}".Trim()
+$retentionDays   = "{backupRetentionDays}".Trim()
+
+Import-Module WindowsServerBackup -ErrorAction SilentlyContinue
+
+$wsbAvailable = $null -ne (Get-Command Get-WBSummary -ErrorAction SilentlyContinue)
+
+# Feature check
+$feature   = Get-WindowsFeature -Name "Windows-Server-Backup" -ErrorAction SilentlyContinue
+$featureOk = $null -ne $feature -and $feature.InstallState -eq "Installed"
+
+# Policy check
+$policy   = if ($wsbAvailable) { Get-WBPolicy -ErrorAction SilentlyContinue } else { $null }
+$policyOk = $null -ne $policy
+
+# Backup age check
+$summary     = if ($wsbAvailable) { Get-WBSummary -ErrorAction SilentlyContinue } else { $null }
+$lastSuccess = if ($null -ne $summary) { $summary.LastSuccessfulBackupTime } else { $null }
+$ageHours    = if ($null -ne $lastSuccess) {
+    [math]::Round((New-TimeSpan -Start $lastSuccess -End (Get-Date)).TotalHours, 1)
+} else {
+    $null
+}
+$backupAgeOk = $null -ne $ageHours -and $ageHours -le 24
+
+# Backup sets
+$backupSets    = if ($wsbAvailable) { Get-WBBackupSet -ErrorAction SilentlyContinue } else { $null }
+$backupSetCount = if ($null -ne $backupSets) { @($backupSets).Count } else { 0 }
+
+# Destination isolation
+$destExists  = -not [string]::IsNullOrWhiteSpace($destinationPath) -and (Test-Path $destinationPath)
+$systemDrive = $env:SystemDrive.TrimEnd('\')
+$destDrive   = if ($destExists) { (Split-Path $destinationPath -Qualifier).TrimEnd('\') } else { $null }
+$isIsolated  = $null -ne $destDrive -and $destDrive -ne $systemDrive
+
+$overallPass = $featureOk -and $policyOk -and $backupAgeOk -and $backupSetCount -gt 0
+
+Write-Output "============================================================"
+Write-Output "ESSENTIAL EIGHT ML1 -- REGULAR BACKUPS"
+Write-Output "ASD Control: Mitigation Strategy 8"
+Write-Output "ISM Controls: 1511, 1515, 1810, 1811, 1812, 1814"
+Write-Output "Reference   : cyber.gov.au/essential-eight"
+Write-Output "============================================================"
+Write-Output "Endpoint    : $hostname"
+Write-Output "OS Type     : Windows Server"
+Write-Output "Report Date : $reportDate"
+Write-Output "Generated   : AttuneOps"
+Write-Output "============================================================"
+Write-Output ""
+Write-Output "BACKUP INFRASTRUCTURE"
+Write-Output "  WSB Feature installed : $(if ($featureOk) { 'Yes' } else { 'No' })"
+Write-Output "  WSB Module available  : $(if ($wsbAvailable) { 'Yes' } else { 'No' })"
+Write-Output "  Backup policy defined : $(if ($policyOk) { 'Yes' } else { 'No' })"
+Write-Output "  Backup sets found     : $backupSetCount"
+Write-Output ""
+Write-Output "BACKUP CURRENCY (ISM-1511)"
+Write-Output "  Last successful backup: $(if ($null -ne $lastSuccess) { $lastSuccess.ToString('yyyy-MM-dd HH:mm:ss') } else { 'Never / Unknown' })"
+Write-Output "  Age (hours)           : $(if ($null -ne $ageHours) { $ageHours } else { 'N/A' })"
+Write-Output "  Within 24-hour SLA    : $(if ($backupAgeOk) { 'Yes' } else { 'No' })"
+Write-Output ""
+Write-Output "DESTINATION ISOLATION (ISM-1812)"
+Write-Output "  Destination path      : $(if ([string]::IsNullOrWhiteSpace($destinationPath)) { 'Not configured' } else { $destinationPath })"
+Write-Output "  Destination exists    : $destExists"
+Write-Output "  Drive isolated        : $(if ($null -ne $destDrive) { $isIsolated } else { 'N/A' })"
+Write-Output ""
+Write-Output "RETENTION (ISM-1515)"
+Write-Output "  Retention days param  : $(if ([string]::IsNullOrWhiteSpace($retentionDays)) { 'Not set' } else { $retentionDays })"
+Write-Output "  Backup sets available : $backupSetCount"
+Write-Output ""
+Write-Output "============================================================"
+Write-Output "OVERALL RESULT : $(if ($overallPass) { 'PASS' } else { 'FAIL' })"
+Write-Output "============================================================"
+
+exit $(if ($overallPass) { 0 } else { 1 })

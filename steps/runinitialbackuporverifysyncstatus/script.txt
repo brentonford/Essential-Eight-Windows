@@ -1,0 +1,79 @@
+$os       = Get-CimInstance -ClassName Win32_OperatingSystem
+$isServer = $os.Caption -match "Windows Server"
+
+if ($isServer) {
+    Import-Module WindowsServerBackup
+
+    Write-Output "Starting initial backup job..."
+    Write-Output "Timestamp: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
+
+    Start-WBBackup -Policy (Get-WBPolicy) -Async
+
+    $timeout  = 1800
+    $elapsed  = 0
+    $interval = 30
+
+    while ($elapsed -lt $timeout) {
+        $job = Get-WBJob -Previous 1 -ErrorAction SilentlyContinue
+        if ($null -eq $job) { Start-Sleep -Seconds $interval; $elapsed += $interval; continue }
+
+        $state = $job.JobState.ToString()
+        Write-Output "Backup job state: $state (${elapsed}s elapsed)"
+
+        if ($state -in @("Completed","CompletedWithWarnings","Failed","Aborted")) { break }
+
+        Start-Sleep -Seconds $interval
+        $elapsed += $interval
+    }
+
+    $job = Get-WBJob -Previous 1 -ErrorAction SilentlyContinue
+    if ($null -eq $job) { Write-Output "WARN: Could not retrieve job status."; exit 0 }
+
+    Write-Output ""
+    Write-Output "Initial backup result: $($job.JobState)"
+    Write-Output "Start: $($job.StartTime.ToString('yyyy-MM-dd HH:mm:ss'))"
+    Write-Output "End  : $(if ($job.EndTime) { $job.EndTime.ToString('yyyy-MM-dd HH:mm:ss') } else { 'In progress' })"
+
+    if ($job.JobState -in @("Failed","Aborted")) {
+        Write-Error "Initial backup failed. Check Windows Server Backup event log."
+        exit 1
+    }
+
+    Write-Output "Initial backup complete. Configuration verified functional."
+    exit 0
+}
+
+# Desktop: verify sync status via OneDrive status file
+Write-Output "Verifying OneDrive sync status..."
+
+$oneDriveStatusPath = "$env:LOCALAPPDATA\Microsoft\OneDrive\logs\Business1\SyncDiagnostics.log"
+
+$syncProcess = Get-Process -Name OneDrive -ErrorAction SilentlyContinue
+if ($null -ne $syncProcess) {
+    Write-Output "OneDrive sync process : Running (PID $($syncProcess.Id))"
+} else {
+    Write-Output "WARN: OneDrive sync process is not running."
+}
+
+# Check last sync time via registry
+$lastSyncRegPath = "HKCU:\SOFTWARE\Microsoft\OneDrive\Accounts\Business1"
+$lastSync = (Get-ItemProperty -Path $lastSyncRegPath -Name "LastSignedIn" -ErrorAction SilentlyContinue).LastSignedIn
+
+if ($lastSync) {
+    Write-Output "Last OneDrive sign-in: $lastSync"
+}
+
+# Check if Documents is under OneDrive
+$docsPath     = [System.Environment]::GetFolderPath("MyDocuments")
+$oneDriveRoot = (Get-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\OneDrive" -Name "UserFolder" -ErrorAction SilentlyContinue).UserFolder
+$docsInOD     = $null -ne $oneDriveRoot -and $docsPath.StartsWith($oneDriveRoot)
+
+Write-Output "Documents path        : $docsPath"
+Write-Output "Documents under OD    : $docsInOD"
+
+if ($docsInOD) {
+    Write-Output "Sync verification PASSED: Documents folder is under OneDrive sync."
+} else {
+    Write-Output "WARN: Documents folder is NOT under OneDrive sync path."
+    Write-Output "Configure Known Folder Move to protect user documents."
+}
