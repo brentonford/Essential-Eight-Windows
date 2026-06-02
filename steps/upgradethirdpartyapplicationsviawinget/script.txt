@@ -1,33 +1,67 @@
-$winget = Get-Command -Name winget -ErrorAction SilentlyContinue
+# winget is not designed to run under service accounts in non-interactive sessions.
+# The COM server (WindowsPackageManagerServer.exe), the CLI source cache, and the
+# Microsoft.WinGet.Client module all require a user session context to function.
+# Running upgrades from a service account produces source open errors or catalog
+# connection failures regardless of how the session is initialised.
+#
+# The correct pattern for automated winget upgrades is a scheduled task that runs
+# as the logged-on user. This step creates that task -- it runs at logon and daily
+# at noon, keeping third-party applications current without requiring service
+# account access to the winget COM layer.
+#
+# On headless servers, winget is not the right patching tool. Windows Update (Step 3)
+# handles Microsoft software. Vendor-specific mechanisms handle everything else.
 
-if ($null -eq $winget) {
-    Write-Output "winget is not available on this system. Skipping third-party application upgrades."
-    Write-Output "NOTE: winget is available on Windows Server 2022 with App Installer from the Microsoft Store or via MSIX package."
+$os       = Get-CimInstance -ClassName Win32_OperatingSystem
+$isServer = $os.Caption -match "Windows Server"
+
+if ($isServer) {
+    Write-Output "Server OS detected -- skipping winget scheduled task."
+    Write-Output "Use Windows Update and vendor update mechanisms for server patching."
     exit 0
 }
 
-Write-Output "winget version: $(winget --version)"
-Write-Output ""
-Write-Output "Listing available upgrades..."
+$taskName   = "WinGet-AutoUpgrade"
+$taskExists = Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
 
-winget upgrade `
-    --accept-source-agreements `
-    --disable-interactivity
-
-Write-Output ""
-Write-Output "Applying all available upgrades..."
-
-winget upgrade `
-    --all `
-    --silent `
-    --accept-package-agreements `
-    --accept-source-agreements `
-    --disable-interactivity
-
-if ($LASTEXITCODE -ne 0) {
-    Write-Output "winget upgrade completed with exit code $LASTEXITCODE."
-    Write-Output "Some packages may have failed to update. Review the output above."
+if ($null -ne $taskExists) {
+    Write-Output "Scheduled task '$taskName' already exists."
     exit 0
 }
 
-Write-Output "winget upgrade completed successfully."
+$wingetExe = Get-Command -Name winget -ErrorAction SilentlyContinue |
+    Select-Object -ExpandProperty Source
+
+if ($null -eq $wingetExe) {
+    Write-Error "winget not found. Run the Install winget step first."
+    exit 1
+}
+
+Write-Output "Creating scheduled task: $taskName"
+
+$action = New-ScheduledTaskAction `
+    -Execute $wingetExe `
+    -Argument "upgrade --all --silent --accept-package-agreements --accept-source-agreements --disable-interactivity"
+
+$triggerLogon = New-ScheduledTaskTrigger -AtLogOn
+$triggerDaily = New-ScheduledTaskTrigger -Daily -At "12:00"
+
+$principal = New-ScheduledTaskPrincipal `
+    -GroupId "BUILTIN\Users" `
+    -RunLevel Limited
+
+$settings = New-ScheduledTaskSettingsSet `
+    -ExecutionTimeLimit (New-TimeSpan -Hours 1) `
+    -MultipleInstances IgnoreNew `
+    -StartWhenAvailable
+
+Register-ScheduledTask `
+    -TaskName $taskName `
+    -Action $action `
+    -Trigger @($triggerLogon, $triggerDaily) `
+    -Principal $principal `
+    -Settings $settings `
+    -Description "Upgrades installed packages via winget. Runs at logon and daily at 12:00." `
+    -Force | Out-Null
+
+Write-Output "Scheduled task '$taskName' created -- winget upgrades run at logon and daily at 12:00."

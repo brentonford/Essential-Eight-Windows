@@ -1,18 +1,19 @@
-# EOL applications list — ASD E8 ML1 requires removal of unsupported applications.
-# Extend this list to match your environment's specific risk profile.
+# ISM-1704 (ML1): office productivity suites, web browsers, email clients, PDF software,
+# Adobe Flash Player, and security products no longer supported by vendors must be removed.
+
 $eolApplications = @(
-    @{ Name = "Adobe Flash Player";          MatchType = "Contains"; WingetId = $null },
-    @{ Name = "Internet Explorer";           MatchType = "Contains"; WingetId = $null },
-    @{ Name = "Java 6";                      MatchType = "Contains"; WingetId = $null },
-    @{ Name = "Java 7";                      MatchType = "Contains"; WingetId = $null },
-    @{ Name = "Java(TM) 6";                  MatchType = "Contains"; WingetId = $null },
-    @{ Name = "Java(TM) 7";                  MatchType = "Contains"; WingetId = $null },
-    @{ Name = "Microsoft Silverlight";       MatchType = "Contains"; WingetId = $null },
-    @{ Name = "Microsoft Visual C++ 2005";   MatchType = "Contains"; WingetId = $null },
-    @{ Name = "Microsoft Visual C++ 2008";   MatchType = "Contains"; WingetId = $null },
-    @{ Name = "Python 2";                    MatchType = "Contains"; WingetId = $null },
-    @{ Name = "7-Zip 1";                     MatchType = "Contains"; WingetId = $null },
-    @{ Name = "7-Zip 2";                     MatchType = "Contains"; WingetId = $null }
+    @{ Name = "Adobe Flash Player";          WingetId = $null },
+    @{ Name = "Internet Explorer";           WingetId = $null },
+    @{ Name = "Java 6";                      WingetId = $null },
+    @{ Name = "Java 7";                      WingetId = $null },
+    @{ Name = "Java(TM) 6";                  WingetId = $null },
+    @{ Name = "Java(TM) 7";                  WingetId = $null },
+    @{ Name = "Microsoft Silverlight";       WingetId = $null },
+    @{ Name = "Microsoft Visual C++ 2005";   WingetId = $null },
+    @{ Name = "Microsoft Visual C++ 2008";   WingetId = $null },
+    @{ Name = "Python 2";                    WingetId = $null },
+    @{ Name = "7-Zip 1";                     WingetId = $null },
+    @{ Name = "7-Zip 2";                     WingetId = $null }
 )
 
 $registryPaths = @(
@@ -25,16 +26,11 @@ $installedApps = $registryPaths | ForEach-Object {
 } | Where-Object { $_.DisplayName }
 
 Write-Output "Installed applications scanned: $($installedApps.Count)"
-Write-Output ""
 
 $foundEol = @()
-
 foreach ($eolEntry in $eolApplications) {
-    $matches = $installedApps | Where-Object {
-        $_.DisplayName -like "*$($eolEntry.Name)*"
-    }
-
-    foreach ($match in $matches) {
+    $matchedApps = $installedApps | Where-Object { $_.DisplayName -like "*$($eolEntry.Name)*" }
+    foreach ($match in $matchedApps) {
         Write-Output "EOL APPLICATION FOUND: $($match.DisplayName) (version: $($match.DisplayVersion))"
         $foundEol += $match
     }
@@ -45,31 +41,39 @@ if ($foundEol.Count -eq 0) {
     exit 0
 }
 
-Write-Output ""
 Write-Output "Attempting removal of $($foundEol.Count) EOL application(s)..."
+
+$removalFailed = $false
 
 foreach ($app in $foundEol) {
     Write-Output "Removing: $($app.DisplayName)..."
 
-    if ($app.UninstallString) {
-        $uninstallCmd = $app.UninstallString -replace '/I', '/X'
-
-        if ($uninstallCmd -match "msiexec") {
-            $productCode = ($uninstallCmd | Select-String -Pattern "\{[A-Z0-9\-]+\}").Matches.Value
-            if ($productCode) {
-                Start-Process -FilePath "msiexec.exe" `
-                    -ArgumentList "/X $productCode /qn /norestart" `
-                    -Wait `
-                    -NoNewWindow
-                Write-Output "  Removal attempted via msiexec for $($app.DisplayName)."
-                continue
-            }
-        }
-
-        Write-Output "  Manual removal required for: $($app.DisplayName)"
-        Write-Output "  Uninstall string: $($app.UninstallString)"
+    if (-not $app.UninstallString) {
+        Write-Error "  No uninstall string found for: $($app.DisplayName). Manual removal required."
+        $removalFailed = $true
         continue
     }
 
-    Write-Output "  No uninstall string found for: $($app.DisplayName). Manual removal required."
+    $uninstallCmd = $app.UninstallString -replace '/I', '/X'
+
+    if ($uninstallCmd -match "msiexec") {
+        $productCode = ($uninstallCmd | Select-String -Pattern "\{[A-Z0-9\-]+\}").Matches.Value
+        if ($productCode) {
+            Start-Process -FilePath "msiexec.exe" `
+                -ArgumentList "/X $productCode /qn /norestart" `
+                -Wait `
+                -NoNewWindow
+            Write-Output "  Removal attempted via msiexec: $($app.DisplayName)"
+            continue
+        }
+    }
+
+    Write-Error "  Automatic removal not possible for: $($app.DisplayName)"
+    Write-Error "  Uninstall string: $($app.UninstallString)"
+    $removalFailed = $true
+}
+
+if ($removalFailed) {
+    Write-Error "One or more EOL applications could not be removed automatically. Manual intervention required."
+    exit 1
 }

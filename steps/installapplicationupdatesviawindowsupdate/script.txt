@@ -2,7 +2,10 @@ Import-Module PSWindowsUpdate
 
 Write-Output "Checking for available application updates via Windows Update..."
 
-$availableUpdates = Get-WindowsUpdate -Category "Application" -NotTitle "Upgrade to" -ErrorAction SilentlyContinue
+$availableUpdates = Get-WindowsUpdate `
+    -Category "Application" `
+    -NotTitle "Upgrade to" `
+    -ErrorAction SilentlyContinue
 
 if ($null -eq $availableUpdates -or $availableUpdates.Count -eq 0) {
     Write-Output "No application updates available via Windows Update."
@@ -14,7 +17,6 @@ $availableUpdates | ForEach-Object {
     Write-Output "  - $($_.Title) [$($_.MsrcSeverity)]"
 }
 
-Write-Output ""
 Write-Output "Installing application updates..."
 
 Install-WindowsUpdate `

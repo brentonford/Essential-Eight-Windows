@@ -10,6 +10,9 @@
             "stepKey": "verifypswindowsupdatemoduleisinstalled"
         }, 
         {
+            "stepKey": "installwinget"
+        }, 
+        {
             "stepKey": "installapplicationupdatesviawindowsupdate"
         }, 
         {

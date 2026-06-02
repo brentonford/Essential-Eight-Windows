@@ -1,33 +1,48 @@
+# On workstations: checks whether the WinGet-AutoUpgrade scheduled task exists
+# and reports its last run result.
+#
+# On servers: winget upgrade is not used -- reports SKIP with explanation.
+#
+# Does not attempt to invoke winget or the WinGet COM API directly, as both
+# fail under service account / non-interactive session contexts.
+
+$os       = Get-CimInstance -ClassName Win32_OperatingSystem
+$isServer = $os.Caption -match "Windows Server"
+
+if ($isServer) {
+    Write-Output "CHECK winget Upgrades : SKIP -- server OS, winget upgrades not applicable"
+    exit 0
+}
+
 $winget = Get-Command -Name winget -ErrorAction SilentlyContinue
-
 if ($null -eq $winget) {
-    Write-Output "CHECK winget Upgrades : SKIP — winget not available on this system"
+    Write-Error "CHECK winget Upgrades : FAIL -- winget not available"
+    exit 1
+}
+
+$taskName = "WinGet-AutoUpgrade"
+$task     = Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
+
+if ($null -eq $task) {
+    Write-Error "CHECK winget Upgrades : FAIL -- scheduled task '$taskName' not found"
+    Write-Error "Re-run the Configure Blueprint to create it."
+    exit 1
+}
+
+$taskInfo   = Get-ScheduledTaskInfo -TaskName $taskName
+$lastResult = $taskInfo.LastTaskResult
+$lastRun    = $taskInfo.LastRunTime
+
+Write-Output "Scheduled task  : $taskName"
+Write-Output "Task state      : $($task.State)"
+Write-Output "Last run        : $($lastRun.ToString('yyyy-MM-dd HH:mm:ss'))"
+Write-Output "Last result     : $lastResult"
+
+# 0 = success, 267009/267011 = task has never run (just created or no trigger has fired yet)
+if ($lastResult -eq 0 -or $lastResult -eq 267009 -or $lastResult -eq 267011) {
+    Write-Output "CHECK winget Upgrades : PASS"
     exit 0
 }
 
-Write-Output "Checking for available winget upgrades..."
-
-$upgradeOutput = winget upgrade --accept-source-agreements --disable-interactivity 2>&1
-$upgradeLines = $upgradeOutput | Where-Object { $_ -match "\S" }
-
-$packageLines = $upgradeLines | Where-Object {
-    $_ -notmatch "^Name" -and
-    $_ -notmatch "^-" -and
-    $_ -notmatch "upgrades available" -and
-    $_ -notmatch "No installed"
-} | Select-Object -Skip 1
-
-$availableCount = ($packageLines | Where-Object { $_ -match "\S" }).Count
-
-if ($availableCount -eq 0) {
-    Write-Output "CHECK winget Upgrades : PASS — no package upgrades available"
-    exit 0
-}
-
-Write-Output "CHECK winget Upgrades : WARN — $availableCount package upgrade(s) available"
-Write-Output ""
-Write-Output "Packages with available upgrades:"
-$packageLines | Where-Object { $_ -match "\S" } | ForEach-Object {
-    Write-Output "  $_"
-}
+Write-Output "CHECK winget Upgrades : WARN -- last task run exited with code $lastResult"
 exit 1

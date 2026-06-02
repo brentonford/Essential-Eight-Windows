@@ -13,8 +13,11 @@ if (Test-Path $wuKey) {
     $reasons += "Windows Update reboot required"
 }
 
-$pendingFileKey = "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager"
-$pendingFiles = (Get-ItemProperty -Path $pendingFileKey -Name PendingFileRenameOperations -ErrorAction SilentlyContinue).PendingFileRenameOperations
+$pendingFiles = (Get-ItemProperty `
+    -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager" `
+    -Name PendingFileRenameOperations `
+    -ErrorAction SilentlyContinue).PendingFileRenameOperations
+
 if ($pendingFiles) {
     $rebootRequired = $true
     $reasons += "Pending file rename operations"
@@ -27,4 +30,4 @@ if ($rebootRequired) {
 
 $WAIT = 10
 shutdown /r /t $WAIT /c "Restart from Attune"
-Write-Host "Restarting in $WAIT seconds."
+Write-Output "Restarting in $WAIT seconds."

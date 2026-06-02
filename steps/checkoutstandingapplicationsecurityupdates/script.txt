@@ -1,6 +1,6 @@
 $module = Get-Module -ListAvailable -Name PSWindowsUpdate
 if ($null -eq $module) {
-    Write-Output "CHECK Outstanding Updates : SKIP — PSWindowsUpdate not available"
+    Write-Error "CHECK Outstanding Updates : FAIL -- PSWindowsUpdate not available"
     exit 1
 }
 
@@ -12,13 +12,11 @@ $outstanding = Get-WindowsUpdate `
     -ErrorAction SilentlyContinue
 
 if ($null -eq $outstanding -or $outstanding.Count -eq 0) {
-    Write-Output "CHECK Outstanding Application Updates : PASS — no updates pending"
+    Write-Output "CHECK Outstanding Application Updates : PASS -- no updates pending"
     exit 0
 }
 
-Write-Output "CHECK Outstanding Application Updates : FAIL — $($outstanding.Count) update(s) pending"
-Write-Output ""
-Write-Output "Pending application updates:"
+Write-Output "CHECK Outstanding Application Updates : FAIL -- $($outstanding.Count) update(s) pending"
 $outstanding | ForEach-Object {
     Write-Output "  [$($_.MsrcSeverity)] $($_.Title)"
 }

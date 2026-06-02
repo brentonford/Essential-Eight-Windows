@@ -1,37 +1,66 @@
-$hostname   = $env:COMPUTERNAME
-$reportDate = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+$hostname         = $env:COMPUTERNAME
+$reportDate       = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+$ml1ThresholdDays = 14
 
-# --- PSWindowsUpdate check ---
+# [1] PSWindowsUpdate
 $pswuModule = Get-Module -ListAvailable -Name PSWindowsUpdate
-$pswuCheck = if ($null -ne $pswuModule) { "PASS" } else { "FAIL" }
+$pswuCheck  = if ($null -ne $pswuModule) { "PASS" } else { "FAIL" }
 
-# --- Outstanding updates ---
-$outstandingUpdates = @()
-$outstandingCheck = "SKIP"
-if ($null -ne $pswuModule) {
-    Import-Module PSWindowsUpdate
-    $outstandingUpdates = Get-WindowsUpdate -Category "Application" -NotTitle "Upgrade to" -ErrorAction SilentlyContinue
-    $outstandingCheck = if ($null -eq $outstandingUpdates -or $outstandingUpdates.Count -eq 0) { "PASS" } else { "FAIL" }
+# [2] winget + scheduled task (workstation only)
+$os            = Get-CimInstance -ClassName Win32_OperatingSystem
+$isServerLocal = $os.Caption -match "Windows Server"
+$wingetCmd     = Get-Command -Name winget -ErrorAction SilentlyContinue
+$taskExists    = $null -ne (Get-ScheduledTask -TaskName "WinGet-AutoUpgrade" -ErrorAction SilentlyContinue)
+
+$wingetCheck = if ($isServerLocal) {
+    "SKIP (server)"
+} elseif ($null -eq $wingetCmd) {
+    "FAIL"
+} elseif (-not $taskExists) {
+    "FAIL -- WinGet-AutoUpgrade task missing"
+} else {
+    "PASS"
 }
 
-# --- Update recency ---
-$daysSinceUpdate = -1
-$recencyCheck = "SKIP"
+# [3] Outstanding updates
+$outstandingUpdates = @()
+$outstandingCheck   = "SKIP"
 if ($null -ne $pswuModule) {
-    $recentHistory = Get-WUHistory -MaxDate (Get-Date) -ErrorAction SilentlyContinue |
-        Where-Object { $_.Categories -match "Application" } |
+    Import-Module PSWindowsUpdate
+    $outstandingUpdates = Get-WindowsUpdate `
+        -Category "Application" `
+        -NotTitle "Upgrade to" `
+        -ErrorAction SilentlyContinue
+    $outstandingCheck = if ($null -eq $outstandingUpdates -or $outstandingUpdates.Count -eq 0) {
+        "PASS"
+    } else {
+        "FAIL"
+    }
+}
+
+# [4] Update recency
+# Do not filter on Categories -- it is a collection, not a string.
+# -match against a collection does element-wise matching, not a boolean predicate.
+# Take the most recent history entry directly.
+$daysSinceUpdate = -1
+$recencyCheck    = "SKIP"
+$lastUpdateTitle = "Unknown"
+
+if ($null -ne $pswuModule) {
+    $mostRecent = Get-WUHistory -ErrorAction SilentlyContinue |
         Sort-Object Date -Descending |
         Select-Object -First 1
 
-    if ($null -ne $recentHistory) {
-        $daysSinceUpdate = ((Get-Date) - $recentHistory.Date).Days
-        $recencyCheck = if ($daysSinceUpdate -le 30) { "PASS" } else { "FAIL" }
+    if ($null -ne $mostRecent) {
+        $daysSinceUpdate = ((Get-Date) - $mostRecent.Date).Days
+        $lastUpdateTitle = $mostRecent.Title
+        $recencyCheck    = if ($daysSinceUpdate -le $ml1ThresholdDays) { "PASS" } else { "FAIL" }
     } else {
         $recencyCheck = "WARN"
     }
 }
 
-# --- EOL scan ---
+# [5] EOL scan
 $eolApplications = @(
     "Adobe Flash Player", "Internet Explorer", "Java 6", "Java 7",
     "Java(TM) 6", "Java(TM) 7", "Microsoft Silverlight",
@@ -52,23 +81,25 @@ $foundEol = @()
 foreach ($eolEntry in $eolApplications) {
     $foundEol += $installedApps | Where-Object { $_.DisplayName -like "*$eolEntry*" }
 }
-
 $eolCheck = if ($foundEol.Count -eq 0) { "PASS" } else { "FAIL" }
 
-# --- Reboot check ---
+# [6] Reboot pending
 $rebootPending = (Test-Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based Servicing\RebootPending") -or
                  (Test-Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Update\RebootRequired")
+$rebootCheck = if ($rebootPending) { "WARN" } else { "No" }
 
-# --- Overall ---
-$checksWithResults = @($pswuCheck, $outstandingCheck, $recencyCheck, $eolCheck) |
-    Where-Object { $_ -ne "SKIP" }
-
-$overallStatus = if ($checksWithResults -contains "FAIL") { "NON-COMPLIANT" } else { "COMPLIANT" }
+# Overall: any FAIL or WARN is non-compliant
+$allChecks     = @($pswuCheck, $wingetCheck, $outstandingCheck, $recencyCheck, $eolCheck)
+$overallStatus = if ($allChecks -contains "FAIL" -or $allChecks -contains "WARN") {
+    "NON-COMPLIANT"
+} else {
+    "COMPLIANT"
+}
 
 $separator = "=" * 60
 
 Write-Output $separator
-Write-Output "  ESSENTIAL EIGHT ML1 — PATCH APPLICATIONS"
+Write-Output "  ESSENTIAL EIGHT ML1 -- PATCH APPLICATIONS"
 Write-Output "  ASD Control: Mitigation Strategy 2"
 Write-Output "  Reference  : cyber.gov.au/essential-eight"
 Write-Output $separator
@@ -76,40 +107,33 @@ Write-Output "  Server     : $hostname"
 Write-Output "  Report Date: $reportDate"
 Write-Output "  Generated  : AttuneOps"
 Write-Output $separator
-Write-Output ""
 Write-Output "  CHECKS"
-Write-Output ""
 Write-Output "  [1] PSWindowsUpdate Module"
-Write-Output "      Result : $pswuCheck"
-Write-Output ""
-Write-Output "  [2] Outstanding Application Security Updates (Windows Update)"
-Write-Output "      Pending: $($outstandingUpdates.Count)"
-Write-Output "      Result : $outstandingCheck"
-Write-Output ""
-Write-Output "  [3] Application Update Recency"
-Write-Output "      Days since last update : $(if ($daysSinceUpdate -ge 0) { $daysSinceUpdate } else { 'Unknown' })"
-Write-Output "      ML1 threshold          : 30 days"
-Write-Output "      Result                 : $recencyCheck"
-Write-Output ""
-Write-Output "  [4] EOL Applications"
-Write-Output "      EOL apps found : $($foundEol.Count)"
+Write-Output "     Result : $pswuCheck"
+Write-Output "  [2] winget"
+Write-Output "     Result : $wingetCheck"
+Write-Output "  [3] Outstanding Application Security Updates"
+Write-Output "     Pending: $($outstandingUpdates.Count)"
+Write-Output "     Result : $outstandingCheck"
+Write-Output "  [4] Application Update Recency (ISM-1691)"
+Write-Output "     Most recent update     : $lastUpdateTitle"
+Write-Output "     Days since last update : $(if ($daysSinceUpdate -ge 0) { $daysSinceUpdate } else { 'Unknown' })"
+Write-Output "     ML1 threshold          : $ml1ThresholdDays days"
+Write-Output "     Result : $recencyCheck"
+Write-Output "  [5] EOL Applications (ISM-1704)"
+Write-Output "     EOL apps found : $($foundEol.Count)"
+Write-Output "     Result : $eolCheck"
 if ($foundEol.Count -gt 0) {
     $foundEol | ForEach-Object {
-        Write-Output "        - $($_.DisplayName) $($_.DisplayVersion)"
+        Write-Output "     EOL: $($_.DisplayName) -- version $($_.DisplayVersion)"
     }
 }
-Write-Output "      Result         : $eolCheck"
-Write-Output ""
-Write-Output "  [5] Reboot Pending"
-Write-Output "      Status : $(if ($rebootPending) { 'YES — schedule maintenance window reboot' } else { 'No' })"
-Write-Output ""
+Write-Output "  [6] Reboot Pending"
+Write-Output "     Status : $rebootCheck"
 Write-Output $separator
 Write-Output "  OVERALL STATUS : $overallStatus"
 Write-Output $separator
 
 if ($overallStatus -eq "NON-COMPLIANT") {
-    Write-Output ""
-    Write-Output "  REMEDIATION: Run the Configure Patch Applications - ML1"
-    Write-Output "  Blueprint against this server to restore compliance."
     exit 1
 }

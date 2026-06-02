@@ -1,7 +1,14 @@
+# ISM-1691 (ML1): patches for office productivity suites, web browsers, email clients,
+# PDF software, and security products must be applied within 2 weeks of release.
+# ISM-1876 (ML1): critical patches or those with working exploits within 48 hours.
+# Threshold: 14 days.
+
+$ml1ThresholdDays = 14
+
 $module = Get-Module -ListAvailable -Name PSWindowsUpdate
 if ($null -eq $module) {
-    Write-Output "CHECK Update History : SKIP -- PSWindowsUpdate not available"
-    exit 0
+    Write-Error "CHECK Update History : FAIL -- PSWindowsUpdate not available"
+    exit 1
 }
 
 Import-Module PSWindowsUpdate
@@ -11,28 +18,24 @@ $history = Get-WUHistory -ErrorAction SilentlyContinue |
     Select-Object -First 10
 
 if ($null -eq $history -or $history.Count -eq 0) {
-    Write-Output "CHECK Update History : WARN -- no application update history found"
-    Write-Output "This may indicate applications have never been patched via Windows Update on this server."
+    Write-Error "CHECK Update History : WARN -- no update history found"
     exit 1
 }
 
-$mostRecent = $history | Select-Object -First 1
+$mostRecent          = $history | Select-Object -First 1
 $daysSinceLastUpdate = ((Get-Date) - $mostRecent.Date).Days
 
-Write-Output "Most recent application update : $($mostRecent.Title)"
-Write-Output "Date applied                   : $($mostRecent.Date.ToString('yyyy-MM-dd HH:mm:ss'))"
-Write-Output "Days since last update         : $daysSinceLastUpdate"
-Write-Output ""
-Write-Output "Recent application update history (last 10):"
+Write-Output "Most recent update     : $($mostRecent.Title)"
+Write-Output "Date applied           : $($mostRecent.Date.ToString('yyyy-MM-dd HH:mm:ss'))"
+Write-Output "Days since last update : $daysSinceLastUpdate"
+Write-Output "Recent update history (last 10):"
 $history | ForEach-Object {
     Write-Output "  [$($_.Date.ToString('yyyy-MM-dd'))] $($_.ResultCode) -- $($_.Title)"
 }
 
-Write-Output ""
-
-if ($daysSinceLastUpdate -gt 30) {
-    Write-Output "CHECK Update History : FAIL -- last application update was $daysSinceLastUpdate days ago (ML1 threshold: 30 days)"
+if ($daysSinceLastUpdate -gt $ml1ThresholdDays) {
+    Write-Error "CHECK Update History : FAIL -- last update $daysSinceLastUpdate days ago (ML1 threshold: $ml1ThresholdDays days)"
     exit 1
-} else {
-    Write-Output "CHECK Update History : PASS -- last update within 30-day ML1 threshold"
 }
+
+Write-Output "CHECK Update History : PASS -- last update within ${ml1ThresholdDays}-day ML1 threshold"

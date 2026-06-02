@@ -1,0 +1,22 @@
+# Resolve winget -- check PATH first, then search WindowsApps.
+# The WindowsApps fallback handles the session PATH gap after provisioning on Server 2022.
+$wingetExe = Get-Command -Name winget -ErrorAction SilentlyContinue |
+    Select-Object -ExpandProperty Source
+
+if ($null -eq $wingetExe) {
+    $wingetExe = Get-ChildItem `
+        -Path "$env:ProgramFiles\WindowsApps" `
+        -Recurse `
+        -Filter "winget.exe" `
+        -ErrorAction SilentlyContinue |
+        Sort-Object LastWriteTime -Descending |
+        Select-Object -First 1 -ExpandProperty FullName
+}
+
+if ($null -eq $wingetExe) {
+    Write-Error "CHECK winget : FAIL -- winget not available. Re-run Configure Blueprint."
+    exit 1
+}
+
+Write-Output "CHECK winget : PASS -- $wingetExe"
+Write-Output "Version: $(& $wingetExe --version)"

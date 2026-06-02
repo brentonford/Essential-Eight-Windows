@@ -1,0 +1,107 @@
+# winget is pre-installed on Windows 11, Windows 10 (recent builds), and Windows Server 2025.
+# On Windows Server 2022 and earlier it requires manual MSIX installation.
+#
+# Requires Windows PowerShell 5.1 -- Appx cmdlets are not available in PowerShell 7.
+#
+# Dependency notes for v1.8.1911:
+#   - DesktopAppInstaller_Dependencies.zip was not included until later releases.
+#     Dependencies must be downloaded individually.
+#   - Microsoft.VCLibs.x64.14.00.Desktop.appx -- from aka.ms permalink (always latest)
+#   - Microsoft.UI.Xaml.2.8.x64.appx -- from microsoft-ui-xaml v2.8.6 release
+#
+# Server PATH note: after Add-AppxProvisionedPackage the package is registered system-wide
+# but is not accessible in the current session via Get-Command or direct path execution
+# (WindowsApps is ACL-locked to TrustedInstaller). Fix: call
+# Add-AppxPackage -RegisterByFamilyName to register it for the current user, after which
+# winget is available normally in the same session.
+#
+# Update $wingetVersion and $licenseFile together when upgrading:
+#   https://github.com/microsoft/winget-cli/releases
+
+$wingetVersion = "1.8.1911"
+$licenseFile   = "76fba573f02545629706ab99170237bc_License1.xml"
+
+$os       = Get-CimInstance -ClassName Win32_OperatingSystem
+$build    = [int]$os.BuildNumber
+$isServer = $os.Caption -match "Windows Server"
+
+$winget = Get-Command -Name winget -ErrorAction SilentlyContinue
+if ($null -ne $winget) {
+    Write-Output "winget is already available: $(winget --version)"
+    exit 0
+}
+
+if ($isServer -and $build -ge 26100) {
+    Write-Error "winget should be pre-installed on Windows Server 2025 (build $build) but was not found."
+    Write-Error "Check that Desktop Experience is installed and App Installer is not corrupted."
+    exit 1
+}
+
+Write-Output "winget not found on $($os.Caption) (build $build). Installing via MSIX..."
+
+$ProgressPreference = "SilentlyContinue"
+$tempDir = Join-Path $env:TEMP "winget-install"
+New-Item -ItemType Directory -Path $tempDir -Force | Out-Null
+
+$vcLibsPath  = Join-Path $tempDir "Microsoft.VCLibs.x64.14.00.Desktop.appx"
+$xamlPath    = Join-Path $tempDir "Microsoft.UI.Xaml.2.8.x64.appx"
+$bundlePath  = Join-Path $tempDir "Microsoft.DesktopAppInstaller.msixbundle"
+$licensePath = Join-Path $tempDir $licenseFile
+
+Write-Output "Downloading VCLibs..."
+Invoke-WebRequest `
+    -Uri "https://aka.ms/Microsoft.VCLibs.x64.14.00.Desktop.appx" `
+    -OutFile $vcLibsPath
+
+Write-Output "Downloading Microsoft.UI.Xaml..."
+Invoke-WebRequest `
+    -Uri "https://github.com/microsoft/microsoft-ui-xaml/releases/download/v2.8.6/Microsoft.UI.Xaml.2.8.x64.appx" `
+    -OutFile $xamlPath
+
+Write-Output "Downloading winget v$wingetVersion..."
+Invoke-WebRequest `
+    -Uri "https://github.com/microsoft/winget-cli/releases/download/v$wingetVersion/Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle" `
+    -OutFile $bundlePath
+
+Invoke-WebRequest `
+    -Uri "https://github.com/microsoft/winget-cli/releases/download/v$wingetVersion/$licenseFile" `
+    -OutFile $licensePath
+
+Write-Output "Installing dependencies..."
+Add-AppxPackage -Path $vcLibsPath -ErrorAction SilentlyContinue
+Add-AppxPackage -Path $xamlPath   -ErrorAction SilentlyContinue
+
+Write-Output "Installing winget..."
+
+if ($isServer) {
+    Add-AppxProvisionedPackage `
+        -Online `
+        -PackagePath $bundlePath `
+        -LicensePath $licensePath | Out-Null
+
+    # Provisioning registers the package system-wide but not for the current user session.
+    # Register for the current user so winget is accessible without a new logon.
+    Write-Output "Registering winget for current user..."
+    Add-AppxPackage -RegisterByFamilyName -MainPackage Microsoft.DesktopAppInstaller_8wekyb3d8bbwe
+} else {
+    Add-AppxPackage -Path $bundlePath
+}
+
+$winget = Get-Command -Name winget -ErrorAction SilentlyContinue
+if ($null -eq $winget) {
+    Write-Error "winget installation completed but winget command is still not available in this session."
+    Write-Error "A session refresh or reboot may be required."
+    exit 1
+}
+
+Write-Output "winget installed successfully: $(winget --version)"
+
+# Install Microsoft.WinGet.Client -- provides PowerShell cmdlets that wrap the
+# winget COM API. Required for automation use under service accounts where the
+# winget CLI fails with source open errors in non-interactive sessions.
+# Pin to the same version as the installed winget runtime. The module version
+# must match the DesktopAppInstaller version -- a newer module will fail with
+# IConnectResult2 cast errors against an older COM API.
+Write-Output "Installing Microsoft.WinGet.Client module v$wingetVersion..."
+Install-Module -Name Microsoft.WinGet.Client -RequiredVersion $wingetVersion -Force -Scope AllUsers -AllowClobber
+Write-Output "Microsoft.WinGet.Client v$wingetVersion installed."

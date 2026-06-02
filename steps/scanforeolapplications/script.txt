@@ -23,22 +23,17 @@ $installedApps = $registryPaths | ForEach-Object {
 } | Where-Object { $_.DisplayName }
 
 $foundEol = @()
-
 foreach ($eolEntry in $eolApplications) {
-    $matches = $installedApps | Where-Object {
-        $_.DisplayName -like "*$eolEntry*"
-    }
-    $foundEol += $matches
+    $foundEol += $installedApps | Where-Object { $_.DisplayName -like "*$eolEntry*" }
 }
 
 if ($foundEol.Count -eq 0) {
-    Write-Output "CHECK EOL Applications : PASS — no EOL applications detected"
+    Write-Output "CHECK EOL Applications : PASS -- no EOL applications detected"
     exit 0
 }
 
-Write-Output "CHECK EOL Applications : FAIL — $($foundEol.Count) EOL application(s) found"
-Write-Output ""
+Write-Output "CHECK EOL Applications : FAIL -- $($foundEol.Count) EOL application(s) found"
 $foundEol | ForEach-Object {
-    Write-Output "  EOL: $($_.DisplayName) — version $($_.DisplayVersion)"
+    Write-Output "  EOL: $($_.DisplayName) -- version $($_.DisplayVersion)"
 }
 exit 1
