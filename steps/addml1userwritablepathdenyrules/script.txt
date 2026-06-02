@@ -1,0 +1,90 @@
+# ISM-1870: Application control applied to user profiles and temporary folders
+# used by operating systems, web browsers, and email clients.
+#
+# WDAC deny path rules use the same flat self-closing element schema as Allow
+# rules, with Action="Deny" and a FilePath attribute:
+#
+#   <FileRules>
+#     <Deny ID="ID_DENY_X" FriendlyName="..." FilePath="%OSDRIVE%\Users\*\Downloads\*" />
+#   </FileRules>
+#
+# The path variable is %OSDRIVE% (all caps). Only %WINDIR%, %SYSTEM32%, and
+# %OSDRIVE% are supported by the WDAC engine -- other environment variables
+# are not expanded.
+#
+# Each deny rule also requires a matching <FileRuleRef RuleID="..."/> in the
+# ProductSigners/FileRulesRef node of the User Mode signing scenario (Value="12").
+#
+# Set-RuleOption (Step 5) validates the full XML on load. Any structural error
+# in the FileRules or FileRulesRef nodes will surface there as a CIPolicyException.
+
+$archivePath   = "{policyExportPath}"
+$policyName    = "E8-ML1-AppControl"
+$policyXmlPath = Join-Path $archivePath "$policyName.xml"
+
+[xml]$xml = Get-Content -Path $policyXmlPath -Raw
+
+$ns        = "urn:schemas-microsoft-com:sipolicy"
+$nsManager = New-Object System.Xml.XmlNamespaceManager($xml.NameTable)
+$nsManager.AddNamespace("si", $ns)
+
+# %OSDRIVE% -- all caps, as required by the WDAC engine.
+#
+# RuleIdType pattern constraint: IDs must begin with ID_ALLOW_ or ID_DENY_
+# followed by uppercase letters and underscores only. No digits at the start
+# of the suffix, no dashes anywhere. ConvertFrom-CIPolicy enforces this via
+# XSD validation and will throw CIPolicyException on any violation.
+$denyPaths = @(
+    @{ Id = "ID_DENY_TEMP_LOCAL";    Path = "%OSDRIVE%\Users\*\AppData\Local\Temp\*";  Name = "Block TEMP (Local)" },
+    @{ Id = "ID_DENY_APPDATA_LOCAL"; Path = "%OSDRIVE%\Users\*\AppData\Local\*";        Name = "Block AppData Local" },
+    @{ Id = "ID_DENY_APPDATA_ROAM";  Path = "%OSDRIVE%\Users\*\AppData\Roaming\*";      Name = "Block AppData Roaming" },
+    @{ Id = "ID_DENY_DOWNLOADS";     Path = "%OSDRIVE%\Users\*\Downloads\*";            Name = "Block Downloads" }
+)
+
+# Get or create <FileRules> node
+$fileRulesNode = $xml.SelectSingleNode("//si:FileRules", $nsManager)
+if ($null -eq $fileRulesNode) {
+    $fileRulesNode = $xml.CreateElement("FileRules", $ns)
+    $xml.SiPolicy.InsertBefore($fileRulesNode, $xml.SiPolicy.SelectSingleNode("si:Signers", $nsManager)) | Out-Null
+}
+
+# Get the User Mode signing scenario (Value="12") for FileRulesRef
+$userModeScenario = $xml.SelectSingleNode("//si:SigningScenario[@Value='12']", $nsManager)
+if ($null -eq $userModeScenario) {
+    Write-Error "User mode SigningScenario (Value=12) not found in policy XML."
+    exit 1
+}
+
+# Get or create ProductSigners/FileRulesRef inside the user mode scenario
+$productSigners = $userModeScenario.SelectSingleNode("si:ProductSigners", $nsManager)
+if ($null -eq $productSigners) {
+    $productSigners = $xml.CreateElement("ProductSigners", $ns)
+    $userModeScenario.AppendChild($productSigners) | Out-Null
+}
+
+$fileRulesRef = $productSigners.SelectSingleNode("si:FileRulesRef", $nsManager)
+if ($null -eq $fileRulesRef) {
+    $fileRulesRef = $xml.CreateElement("FileRulesRef", $ns)
+    $productSigners.AppendChild($fileRulesRef) | Out-Null
+}
+
+foreach ($denyPath in $denyPaths) {
+    # <Deny ID="..." FriendlyName="..." FilePath="..." />
+    # Flat self-closing element -- identical structure to <Allow> rules.
+    $denyElem = $xml.CreateElement("Deny", $ns)
+    $denyElem.SetAttribute("ID",           $denyPath.Id)
+    $denyElem.SetAttribute("FriendlyName", $denyPath.Name)
+    $denyElem.SetAttribute("FilePath",     $denyPath.Path)
+    $fileRulesNode.AppendChild($denyElem) | Out-Null
+
+    # <FileRuleRef RuleID="..." /> in the user mode scenario
+    $fileRuleRef = $xml.CreateElement("FileRuleRef", $ns)
+    $fileRuleRef.SetAttribute("RuleID", $denyPath.Id)
+    $fileRulesRef.AppendChild($fileRuleRef) | Out-Null
+
+    Write-Output "Deny rule added: $($denyPath.Name) [$($denyPath.Path)]"
+}
+
+$xml.Save($policyXmlPath)
+Write-Output "ML1 path deny rules written to policy XML."
+Write-Output "Policy file: $policyXmlPath"

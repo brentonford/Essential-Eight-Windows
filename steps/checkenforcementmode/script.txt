@@ -3,7 +3,7 @@ $policyName    = "E8-ML1-AppControl"
 $policyXmlPath = Join-Path $archivePath "$policyName.xml"
 
 if (-not (Test-Path $policyXmlPath)) {
-    Write-Output "CHECK Enforcement Mode : SKIP -- policy XML not found"
+    Write-Error "CHECK Enforcement Mode : FAIL -- policy XML not found"
     exit 1
 }
 
@@ -13,11 +13,9 @@ $ruleOptions = $xml.SelectNodes("//*[local-name()='Rule']/*[local-name()='Option
 $umciEnabled  = $false
 $auditEnabled = $false
 
-foreach ($opt in $ruleOptions) {
-    switch ($opt.InnerText) {
-        "Enabled:UMCI"       { $umciEnabled  = $true }
-        "Enabled:Audit Mode" { $auditEnabled = $true }
-    }
+foreach ($option in $ruleOptions) {
+    if ($option.InnerText -eq "Enabled:UMCI")      { $umciEnabled  = $true }
+    if ($option.InnerText -eq "Enabled:Audit Mode") { $auditEnabled = $true }
 }
 
 $mode = if ($auditEnabled) { "Audit" } else { "Enforce" }
@@ -25,15 +23,15 @@ $mode = if ($auditEnabled) { "Audit" } else { "Enforce" }
 Write-Output "UMCI (user-mode enforcement) : $umciEnabled"
 Write-Output "Audit mode active            : $auditEnabled"
 Write-Output "Effective mode               : $mode"
-Write-Output ""
 
 if (-not $umciEnabled) {
-    Write-Output "CHECK Enforcement Mode : FAIL -- UMCI not set (user-mode code integrity inactive)"
+    Write-Error "CHECK Enforcement Mode : FAIL -- UMCI not enabled (user-mode enforcement inactive)"
     exit 1
 }
 
 if ($auditEnabled) {
     Write-Output "CHECK Enforcement Mode : WARN -- Audit mode (logs violations, does not block)"
+    exit 1
     Write-Output "When ready: re-run Configure Blueprint with WDAC Enforcement Mode = 'Enforce'"
 } else {
     Write-Output "CHECK Enforcement Mode : PASS -- Enforce mode active"

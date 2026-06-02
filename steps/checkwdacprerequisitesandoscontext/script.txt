@@ -5,7 +5,6 @@ $isServer    = $os.Caption -match "Windows Server"
 Write-Output "OS Caption    : $($os.Caption)"
 Write-Output "Build Number  : $buildNumber"
 Write-Output "OS Type       : $(if ($isServer) { 'Server' } else { 'Desktop/Workstation' })"
-Write-Output ""
 
 # Multi-policy format requires Windows 10 1903 (build 18362) or Server 2019 (build 17763)
 $multiPolicyMinBuild = 17763
@@ -16,25 +15,22 @@ if ($buildNumber -lt $multiPolicyMinBuild) {
     exit 1
 }
 
-# Check ConfigCI module (WDAC PowerShell management module)
 $configCI = Get-Module -ListAvailable -Name ConfigCI
 if ($null -eq $configCI) {
     Write-Error "ConfigCI module not found. Ensure Windows Defender Application Control tools are available."
     exit 1
 }
 
-Write-Output "ConfigCI module  : Available"
+Write-Output "ConfigCI module     : Available"
 Write-Output "Multi-policy format : Supported (build $buildNumber >= $multiPolicyMinBuild)"
-Write-Output ""
 
-# ISM framing
 if ($isServer) {
     Write-Output "ISM SCOPE: This server will implement WDAC ahead of ML2 requirements."
-    Write-Output "  ISM-1490 (ML2): Application control on internet-facing servers."
-    Write-Output "  ISM-1656 (ML3): Application control on non-internet-facing servers."
-    Write-Output "  ML1 application control (ISM-0843) applies to workstations only."
+    Write-Output "ISM-1490 (ML2): Application control on internet-facing servers."
+    Write-Output "ISM-1656 (ML3): Application control on non-internet-facing servers."
+    Write-Output "ML1 application control (ISM-0843) applies to workstations only."
 } else {
     Write-Output "ISM SCOPE: ML1 compliance."
-    Write-Output "  ISM-0843 (ML1): Application control on workstations."
-    Write-Output "  ISM-1870 (ML1): Applied to user profiles and temporary folders."
+    Write-Output "ISM-0843 (ML1): Application control on workstations."
+    Write-Output "ISM-1870 (ML1): Applied to user profiles and temporary folders."
 }

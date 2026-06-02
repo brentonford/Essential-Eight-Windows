@@ -1,51 +1,54 @@
-# The configure step uses Merge-CIPolicy to generate FilePathRules,
-# then changes Action="Allow" to Action="Deny" via string replacement.
-# This step reads the archive XML and verifies:
-#   1. FilePathRule elements exist with Action="Deny"
-#   2. All four ISM-1870 paths are covered
+# Reads Deny rules from the policy XML and verifies all ISM-1870 required
+# paths are present.
+#
+# WDAC deny path rules are flat self-closing <Deny> elements with a FilePath
+# attribute -- the same structure as <Allow> rules. This matches exactly how
+# Step 4 of the Configure Blueprint writes them.
+#
+# Path variable is %OSDRIVE% (all caps) -- matches the Configure Blueprint.
 
 $archivePath   = "{policyExportPath}"
 $policyName    = "E8-ML1-AppControl"
 $policyXmlPath = Join-Path $archivePath "$policyName.xml"
 
 if (-not (Test-Path $policyXmlPath)) {
-    Write-Output "CHECK Path Deny Rules : SKIP -- policy XML not found"
+    Write-Error "CHECK Path Deny Rules : FAIL -- policy XML not found"
     exit 1
 }
 
 $requiredPaths = @(
-    "%OSDrive%\Users\*\AppData\Local\Temp\*",
-    "%OSDrive%\Users\*\AppData\Local\*",
-    "%OSDrive%\Users\*\AppData\Roaming\*",
-    "%OSDrive%\Users\*\Downloads\*"
+    "%OSDRIVE%\Users\*\AppData\Local\Temp\*",
+    "%OSDRIVE%\Users\*\AppData\Local\*",
+    "%OSDRIVE%\Users\*\AppData\Roaming\*",
+    "%OSDRIVE%\Users\*\Downloads\*"
 )
 
-[xml]$xml = Get-Content -Path $policyXmlPath -Raw
+[xml]$xml  = Get-Content -Path $policyXmlPath -Raw
+$ns        = "urn:schemas-microsoft-com:sipolicy"
+$nsManager = New-Object System.Xml.XmlNamespaceManager($xml.NameTable)
+$nsManager.AddNamespace("si", $ns)
 
-$denyRules = $xml.SelectNodes("//*[local-name()='FilePathRule'][@Action='Deny']")
+# <Deny FilePath="..." /> -- FilePath is a direct attribute on the Deny element
+$denyRules     = $xml.SelectNodes("//si:FileRules/si:Deny", $nsManager)
+$deployedPaths = [System.Collections.Generic.List[string]]::new()
 
-Write-Output "FilePathRule deny rules found: $($denyRules.Count)"
-Write-Output ""
-
-$coveredPaths = @()
 foreach ($rule in $denyRules) {
-    $fpNode = $rule.SelectSingleNode("*[local-name()='FileAttributes']/*[local-name()='FilePath']")
-    if ($null -eq $fpNode) {
-        continue
+    $filePath = $rule.GetAttribute("FilePath")
+    if (-not [string]::IsNullOrEmpty($filePath)) {
+        $deployedPaths.Add($filePath)
+        Write-Output "Deny rule found: $filePath"
     }
-    $path = $fpNode.GetAttribute("FilePath")
-    $coveredPaths += $path
-    Write-Output "Deny rule : $($rule.GetAttribute('Id'))  $path"
 }
 
-Write-Output ""
+Write-Output "Deny rules found: $($deployedPaths.Count)"
 
-$missingPaths = $requiredPaths | Where-Object { $_ -notin $coveredPaths }
+$missingPaths = $requiredPaths | Where-Object { $_ -notin $deployedPaths }
 
 if ($missingPaths.Count -eq 0) {
     Write-Output "CHECK Path Deny Rules : PASS -- all ISM-1870 paths covered"
-} else {
-    Write-Output "CHECK Path Deny Rules : FAIL -- $($missingPaths.Count) required path(s) missing:"
-    $missingPaths | ForEach-Object { Write-Output "  Missing: $_" }
-    exit 1
+    exit 0
 }
+
+Write-Output "CHECK Path Deny Rules : FAIL -- $($missingPaths.Count) required path(s) missing:"
+$missingPaths | ForEach-Object { Write-Output "  Missing: $_" }
+exit 1

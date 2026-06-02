@@ -3,33 +3,33 @@ $policyName         = "E8-ML1-AppControl"
 $policyXmlPath      = Join-Path $archivePath "$policyName.xml"
 $activePoliciesPath = "C:\Windows\System32\CodeIntegrity\CiPolicies\Active"
 
-$xmlExists = Test-Path $policyXmlPath
 Write-Output "Policy XML archive path  : $policyXmlPath"
-Write-Output "Policy XML present       : $xmlExists"
+Write-Output "Active policies directory: $activePoliciesPath"
+
+$xmlExists = Test-Path $policyXmlPath
+Write-Output "Policy XML present in archive : $xmlExists"
 
 if (-not $xmlExists) {
-    Write-Output "CHECK Policy Deployed : FAIL -- policy XML not found in archive path"
-    Write-Output "Run the Configure Blueprint to create and deploy the policy."
+    Write-Error "CHECK Policy Deployed : FAIL -- policy XML not found in archive"
     exit 1
 }
 
-[xml]$xml      = Get-Content -Path $policyXmlPath -Raw
-$policyId      = $xml.SiPolicy.PolicyID
-$policyIdClean = $policyId -replace '[{}]', ''
-$binaryName    = "{$policyIdClean}.cip"
-$activeBinary  = Join-Path $activePoliciesPath $binaryName
+[xml]$xml       = Get-Content -Path $policyXmlPath -Raw
+$policyId       = $xml.SiPolicy.PolicyID
+$policyIdClean  = $policyId -replace '[{}]', ''
+$binaryFileName = "{$policyIdClean}.cip"
+$activeBinaryPath = Join-Path $activePoliciesPath $binaryFileName
 
 Write-Output "Policy ID (from XML) : $policyId"
-Write-Output "Expected binary      : $activeBinary"
-Write-Output "Binary present       : $(Test-Path $activeBinary)"
+Write-Output "Expected binary      : $activeBinaryPath"
 
-if (Test-Path $activeBinary) {
-    $bin = Get-Item $activeBinary
-    Write-Output "Binary size          : $($bin.Length) bytes"
-    Write-Output "Binary last modified : $($bin.LastWriteTime.ToString('yyyy-MM-dd HH:mm:ss'))"
-    Write-Output "CHECK Policy Deployed : PASS"
-} else {
-    Write-Output "CHECK Policy Deployed : FAIL -- binary not found in active policies directory"
-    Write-Output "Either the policy has not been deployed or the server has not been rebooted."
-    Write-Output "A reboot is required after the Configure Blueprint deploys the binary."
+if (-not (Test-Path $activeBinaryPath)) {
+    Write-Error "CHECK Policy Deployed : FAIL -- binary not found in active policies directory"
+    exit 1
 }
+
+$binary = Get-Item $activeBinaryPath
+Write-Output "Binary present        : True"
+Write-Output "Binary size           : $($binary.Length) bytes"
+Write-Output "Binary last modified  : $($binary.LastWriteTime.ToString('yyyy-MM-dd HH:mm:ss'))"
+Write-Output "CHECK Policy Deployed : PASS"

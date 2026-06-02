@@ -1,0 +1,16 @@
+{
+    "actionOnStepFail": "stop", 
+    "enabled": true, 
+    "externalUuid4": "52d0ced0-7b03-4538-83fb-820eec884ae4", 
+    "interpreter": 2, 
+    "interpreterCommand": null, 
+    "interpreterScriptExt": null, 
+    "interpreterScriptSyntax": null, 
+    "key": "buildallowallbasepolicy", 
+    "name": "Build AllowAll Base Policy", 
+    "osCredKey": "windowscredential", 
+    "serverKey": "windowsserver", 
+    "successExitCode": 0, 
+    "timeout": 60, 
+    "type": "com.servertribe.attune.tuples.StepWinRmTuple"
+}

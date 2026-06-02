@@ -1,0 +1,30 @@
+# The AllowAll template allows all code to execute by default.
+# We then add specific deny rules on top for ML1 path control (ISM-1870).
+# This is the correct ML1 approach: allow-all baseline + targeted denies.
+# ML2 inverts this: deny-all baseline + explicit allows.
+
+$templatePath  = "$env:windir\schemas\CodeIntegrity\ExamplePolicies\AllowAll.xml"
+$archivePath   = "{policyExportPath}"
+$policyName    = "E8-ML1-AppControl"
+$policyXmlPath = Join-Path $archivePath "$policyName.xml"
+
+if (-not (Test-Path $templatePath)) {
+    Write-Error "AllowAll policy template not found at: $templatePath"
+    Write-Error "Verify Windows Defender Application Control is installed."
+    exit 1
+}
+
+Copy-Item -Path $templatePath -Destination $policyXmlPath -Force
+Write-Output "AllowAll template copied to: $policyXmlPath"
+
+# Set a stable policy name and reset the PolicyID to a new GUID.
+# -ResetPolicyID generates a fresh GUID and writes it into the XML.
+# Read it back from the XML immediately after -- do not rely on the return value.
+Set-CIPolicyIdInfo -FilePath $policyXmlPath -PolicyName $policyName -ResetPolicyID | Out-Null
+
+[xml]$xml = Get-Content -Path $policyXmlPath -Raw
+$policyId = $xml.SiPolicy.PolicyID
+
+Write-Output "Policy name : $policyName"
+Write-Output "Policy ID   : $policyId"
+Write-Output "Policy XML  : $policyXmlPath"

@@ -1,0 +1,32 @@
+# WDAC policy rule options:
+#   0  = Enabled:UMCI            -- enforce user-mode code integrity (required for app control)
+#   3  = Enabled:Audit Mode      -- log violations without blocking (remove this to enforce)
+#   12 = Required:Enforce Store Applications -- applies policy to packaged apps
+#
+# We always set UMCI (0).
+# We set or remove Audit Mode (3) based on the {wdacEnforcementMode} parameter.
+
+$archivePath     = "{policyExportPath}"
+$policyName      = "E8-ML1-AppControl"
+$policyXmlPath   = Join-Path $archivePath "$policyName.xml"
+$enforcementMode = "{wdacEnforcementMode}".Trim().ToLower()
+
+# Enable UMCI -- required for user-mode application enforcement
+Set-RuleOption -FilePath $policyXmlPath -Option 0
+Write-Output "Option 0 set: Enabled:UMCI"
+
+if ($enforcementMode -eq "enforce") {
+    Set-RuleOption -FilePath $policyXmlPath -Option 3 -Delete
+    Write-Output "Option 3 removed: Audit Mode disabled -- policy will ENFORCE"
+    Write-Output "WARNING: Enforce mode is active. Unauthorised execution in blocked paths"
+    Write-Output "will be prevented. Verify audit logs before deploying to production."
+} else {
+    Set-RuleOption -FilePath $policyXmlPath -Option 3
+    Write-Output "Option 3 set: Enabled:Audit Mode -- policy will LOG only (not block)"
+    Write-Output "NOTE: Review Event ID 3076 in Microsoft-Windows-CodeIntegrity/Operational"
+    Write-Output "after deployment. When no legitimate apps are flagged in blocked paths,"
+    Write-Output "re-run this Blueprint with WDAC Enforcement Mode set to 'Enforce'."
+}
+
+Write-Output "Policy options configured."
+Write-Output "Enforcement mode: $enforcementMode"

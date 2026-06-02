@@ -1,0 +1,16 @@
+{
+    "actionOnStepFail": "stop", 
+    "enabled": true, 
+    "externalUuid4": "de1f90a5-0052-45e8-88cf-68c2bc2ac232", 
+    "interpreter": 2, 
+    "interpreterCommand": null, 
+    "interpreterScriptExt": null, 
+    "interpreterScriptSyntax": null, 
+    "key": "setpolicyoptionsandenforcementmode", 
+    "name": "Set Policy Options and Enforcement Mode", 
+    "osCredKey": "windowscredential", 
+    "serverKey": "windowsserver", 
+    "successExitCode": 0, 
+    "timeout": 60, 
+    "type": "com.servertribe.attune.tuples.StepWinRmTuple"
+}

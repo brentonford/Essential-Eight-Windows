@@ -9,11 +9,11 @@
 #
 # To remove this policy (e.g. for rollback):
 #   Delete the .cip file from CiPolicies\Active\ and reboot.
-#   (Only works while policy is unsigned — which this policy is.)
+#   (Only works while policy is unsigned -- which this policy is.)
 
-$archivePath   = "{policyExportPath}"
-$policyName    = "E8-ML1-AppControl"
-$policyXmlPath = Join-Path $archivePath "$policyName.xml"
+$archivePath        = "{policyExportPath}"
+$policyName         = "E8-ML1-AppControl"
+$policyXmlPath      = Join-Path $archivePath "$policyName.xml"
 $activePoliciesPath = "C:\Windows\System32\CodeIntegrity\CiPolicies\Active"
 
 if (-not (Test-Path $activePoliciesPath)) {
@@ -21,37 +21,31 @@ if (-not (Test-Path $activePoliciesPath)) {
     Write-Output "Created active policies directory: $activePoliciesPath"
 }
 
-# Extract the PolicyID GUID from the XML (used as the binary filename)
-[xml]$xml = Get-Content -Path $policyXmlPath -Raw
-$policyId = $xml.SiPolicy.PolicyID
+[xml]$xml      = Get-Content -Path $policyXmlPath -Raw
+$policyId      = $xml.SiPolicy.PolicyID
 $policyIdClean = $policyId -replace '[{}]', ''
 
 Write-Output "Policy ID (GUID): $policyId"
 
-$binaryFileName = "{$policyIdClean}.cip"
+$binaryFileName    = "{$policyIdClean}.cip"
 $archiveBinaryPath = Join-Path $archivePath $binaryFileName
 $activeBinaryPath  = Join-Path $activePoliciesPath $binaryFileName
 
-# Convert XML to binary
 ConvertFrom-CIPolicy -XmlFilePath $policyXmlPath -BinaryFilePath $archiveBinaryPath
 Write-Output "Policy converted to binary: $archiveBinaryPath"
 
-# Copy to active policies directory
 Copy-Item -Path $archiveBinaryPath -Destination $activeBinaryPath -Force
 Write-Output "Policy deployed to: $activeBinaryPath"
 
-# Archive a copy of the XML with timestamp for change management
 $timestamp       = Get-Date -Format "yyyyMMdd-HHmmss"
 $archivedXmlPath = Join-Path $archivePath "$policyName-$timestamp.xml"
 Copy-Item -Path $policyXmlPath -Destination $archivedXmlPath
 Write-Output "Policy XML archived: $archivedXmlPath"
 
-Write-Output ""
 Write-Output "=========================================="
 Write-Output " REBOOT REQUIRED to activate WDAC policy."
 Write-Output " Schedule a maintenance window reboot."
 Write-Output "=========================================="
-Write-Output ""
 Write-Output "Deployment summary:"
 Write-Output "  Policy name     : $policyName"
 Write-Output "  Policy ID       : $policyId"

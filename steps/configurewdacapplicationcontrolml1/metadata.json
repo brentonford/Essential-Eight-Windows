@@ -13,13 +13,22 @@
             "stepKey": "createpolicyarchivedirectory"
         }, 
         {
-            "stepKey": "buildcompletewdacpolicyxml"
+            "stepKey": "buildallowallbasepolicy"
+        }, 
+        {
+            "stepKey": "addml1userwritablepathdenyrules"
+        }, 
+        {
+            "stepKey": "setpolicyoptionsandenforcementmode"
         }, 
         {
             "stepKey": "deploywdacpolicy"
         }, 
         {
             "stepKey": "rebootmachine"
+        }, 
+        {
+            "stepKey": "verifywdacapplicationcontrolml1"
         }
     ], 
     "name": "Configure WDAC Application Control - ML1", 

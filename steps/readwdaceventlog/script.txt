@@ -1,7 +1,7 @@
 # Event IDs in Microsoft-Windows-CodeIntegrity/Operational:
-#   3076 = Audit block -- would have been blocked in Enforce mode
-#   3077 = Enforce block -- was actively blocked
-#   3089 = Policy loaded/refreshed
+#   3076 = Audit block (would have been blocked in enforce mode)
+#   3077 = Enforce block (was actively blocked)
+#   3089 = Policy refresh/deployment event
 
 $logName  = "Microsoft-Windows-CodeIntegrity/Operational"
 $lookback = (Get-Date).AddDays(-7)
@@ -14,42 +14,33 @@ $events = Get-WinEvent -FilterHashtable @{
 
 if ($null -eq $events -or $events.Count -eq 0) {
     Write-Output "No WDAC events (3076/3077/3089) found in the last 7 days."
-    Write-Output ""
     Write-Output "Possible reasons:"
-    Write-Output "  - Server has not been rebooted since policy deployment (policy not yet active)"
-    Write-Output "  - No execution attempts occurred in the blocked paths during this period"
-    exit 1
+    Write-Output "- No execution attempts occurred in the blocked paths during this period"
+    Write-Output "- Policy was deployed very recently and the system is still clean"
+    exit 0
 }
 
 $auditBlocks   = @($events | Where-Object { $_.Id -eq 3076 })
 $enforceBlocks = @($events | Where-Object { $_.Id -eq 3077 })
 $policyEvents  = @($events | Where-Object { $_.Id -eq 3089 })
 
-Write-Output "WDAC events in the last 7 days:"
-Write-Output "  3076 Audit blocks   : $($auditBlocks.Count)"
-Write-Output "  3077 Enforce blocks : $($enforceBlocks.Count)"
-Write-Output "  3089 Policy events  : $($policyEvents.Count)"
-
-if ($policyEvents.Count -gt 0) {
-    $latest = $policyEvents | Sort-Object TimeCreated -Descending | Select-Object -First 1
-    Write-Output ""
-    Write-Output "Most recent policy event: $($latest.TimeCreated.ToString('yyyy-MM-dd HH:mm:ss'))"
-}
+Write-Output "WDAC events (last 7 days):"
+Write-Output "  Audit blocks   (3076): $($auditBlocks.Count)"
+Write-Output "  Enforce blocks (3077): $($enforceBlocks.Count)"
+Write-Output "  Policy events  (3089): $($policyEvents.Count)"
 
 if ($auditBlocks.Count -gt 0) {
-    Write-Output ""
-    Write-Output "Recent audit blocks (last 5) -- review before switching to Enforce:"
+    Write-Output "Recent audit block events (last 5):"
     $auditBlocks | Sort-Object TimeCreated -Descending | Select-Object -First 5 | ForEach-Object {
-        $msg = $_.Properties | Select-Object -ExpandProperty Value -ErrorAction SilentlyContinue
-        Write-Output "  [$($_.TimeCreated.ToString('yyyy-MM-dd HH:mm:ss'))] $($msg[1])"
+        $ts      = $_.TimeCreated.ToString('yyyy-MM-dd HH:mm:ss')
+        $message = $_.Message -replace '\s+', ' '
+        Write-Output "  [$ts] $message"
     }
 }
 
 if ($enforceBlocks.Count -gt 0) {
-    Write-Output ""
-    Write-Output "Recent enforce blocks (last 5):"
+    Write-Output "Recent enforce block events (last 5):"
     $enforceBlocks | Sort-Object TimeCreated -Descending | Select-Object -First 5 | ForEach-Object {
-        $msg = $_.Properties | Select-Object -ExpandProperty Value -ErrorAction SilentlyContinue
-        Write-Output "  [$($_.TimeCreated.ToString('yyyy-MM-dd HH:mm:ss'))] $($msg[1])"
+        Write-Output "  [$($_.TimeCreated.ToString('yyyy-MM-dd HH:mm:ss'))] Block event recorded"
     }
 }

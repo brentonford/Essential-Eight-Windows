@@ -1,0 +1,1 @@
+Detects OS type (Server vs Desktop), checks the ConfigCI module is available, confirms the OS build supports multi-policy format (Windows 10 1903+ / Server 2019+), and sets the ISM framing for the report.
