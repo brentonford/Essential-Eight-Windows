@@ -18,7 +18,7 @@ Write-Output "IE11 policy key present       : $policyKeyExists"
 Write-Output "DisableInternetExplorer value : $policyValue"
 Write-Output "Edge IE Mode integration      : $ieModeValue"
 
-$featureDisabled = $featureState -in @("Disabled", "NotPresent")
+$featureDisabled = $featureState -in @("Disabled", "DisablePending", "NotPresent")
 $policyDisabled  = $policyValue -eq 1
 $ieModeDisabled  = $ieModeValue -eq 0
 
@@ -27,6 +27,6 @@ if ($featureDisabled -and $policyDisabled) {
 } elseif ($policyDisabled) {
     Write-Output "CHECK ISM-1654 IE11 : PASS (policy key set; feature state: $featureState)"
 } else {
-    Write-Output "CHECK ISM-1654 IE11 : FAIL — IE11 is not fully disabled"
+    Write-Output "CHECK ISM-1654 IE11 : FAIL -- IE11 is not fully disabled"
     exit 1
 }

@@ -3,7 +3,7 @@
 # ISM-1585: Web browser security settings cannot be changed by users.
 #
 # Edge policies are written to HKLM:\SOFTWARE\Policies\Microsoft\Edge
-# Values in this path are policy-enforced — standard users cannot override them.
+# Values in this path are policy-enforced -- standard users cannot override them.
 # Java via NPAPI is not supported in Chromium-based Edge. ISM-1486 is met
 # by the absence of NPAPI support and the disabling of IE11.
 #
@@ -19,7 +19,7 @@ if (-not (Test-Path $edgePath)) {
 }
 
 $edgeSettings = @{
-    # SmartScreen — blocks malicious sites, phishing, malicious downloads
+    # SmartScreen -- blocks malicious sites, phishing, malicious downloads
     SmartScreenEnabled                            = 1
     # PUA protection via SmartScreen
     SmartScreenPuaEnabled                         = 1

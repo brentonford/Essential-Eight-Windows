@@ -1,4 +1,4 @@
-# ISM-1485, ISM-1486, ISM-1585 — Mozilla Firefox
+# ISM-1485, ISM-1486, ISM-1585 -- Mozilla Firefox
 # Exits with documented skip if Firefox is not installed.
 
 $firefoxExe = @(
@@ -9,7 +9,7 @@ $firefoxExe = @(
 $firefoxInstalled = $firefoxExe | Where-Object { Test-Path $_ }
 
 if (-not $firefoxInstalled) {
-    Write-Output "CHECK Firefox Policies : NOT APPLICABLE — Firefox not installed"
+    Write-Output "CHECK Firefox Policies : NOT APPLICABLE -- Firefox not installed"
     exit 0
 }
 
@@ -17,7 +17,7 @@ $firefoxPath    = "HKLM:\SOFTWARE\Policies\Mozilla\Firefox"
 $firefoxPresent = Test-Path $firefoxPath
 
 if (-not $firefoxPresent) {
-    Write-Output "CHECK Firefox Policies : FAIL — Firefox installed but no policy path found"
+    Write-Output "CHECK Firefox Policies : FAIL -- Firefox installed but no policy path found"
     exit 1
 }
 
@@ -42,7 +42,7 @@ if ($trackingValue -ne 1) {
 }
 
 if ($lockedValue -ne 1) {
-    Write-Output "FAIL  Firefox tracking protection not locked — users can disable it [ISM-1585]"
+    Write-Output "FAIL  Firefox tracking protection not locked -- users can disable it [ISM-1585]"
     $failCount++
 } else {
     Write-Output "PASS  Firefox tracking protection is locked [ISM-1585]"
@@ -52,6 +52,6 @@ Write-Output ""
 if ($failCount -eq 0) {
     Write-Output "CHECK Firefox Policies : PASS"
 } else {
-    Write-Output "CHECK Firefox Policies : FAIL — $failCount setting(s) non-compliant"
+    Write-Output "CHECK Firefox Policies : FAIL -- $failCount setting(s) non-compliant"
     exit 1
 }

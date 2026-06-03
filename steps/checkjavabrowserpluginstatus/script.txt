@@ -47,10 +47,10 @@ $ieEnabled  = $null -ne $ieFeature -and $ieFeature.State -eq "Enabled"
 
 Write-Output ""
 Write-Output "IE11 active (NPAPI-capable)    : $ieEnabled"
-Write-Output "Java browser plugin config     : $(if ($browserPluginEnabled) { 'ENABLED — remediate' } else { 'Not enabled' })"
+Write-Output "Java browser plugin config     : $(if ($browserPluginEnabled) { 'ENABLED -- remediate' } else { 'Not enabled' })"
 
 if (-not $ieEnabled -and -not $browserPluginEnabled) {
-    Write-Output "CHECK ISM-1486 Java : PASS — no NPAPI-capable browser active, Java plugin not enabled"
+    Write-Output "CHECK ISM-1486 Java : PASS -- no NPAPI-capable browser active, Java plugin not enabled"
 } else {
     Write-Output "CHECK ISM-1486 Java : FAIL"
     exit 1

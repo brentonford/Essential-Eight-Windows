@@ -1,4 +1,4 @@
-# ISM-1485, ISM-1486, ISM-1585 — Google Chrome
+# ISM-1485, ISM-1486, ISM-1585 -- Google Chrome
 # Exits with documented skip if Chrome is not installed.
 
 $chromeExe = @(
@@ -9,7 +9,7 @@ $chromeExe = @(
 $chromeInstalled = $chromeExe | Where-Object { Test-Path $_ }
 
 if (-not $chromeInstalled) {
-    Write-Output "CHECK Chrome Policies : NOT APPLICABLE — Chrome not installed"
+    Write-Output "CHECK Chrome Policies : NOT APPLICABLE -- Chrome not installed"
     exit 0
 }
 
@@ -17,7 +17,7 @@ $chromePath    = "HKLM:\SOFTWARE\Policies\Google\Chrome"
 $chromePresent = Test-Path $chromePath
 
 if (-not $chromePresent) {
-    Write-Output "CHECK Chrome Policies : FAIL — Chrome installed but no policy path found"
+    Write-Output "CHECK Chrome Policies : FAIL -- Chrome installed but no policy path found"
     exit 1
 }
 
@@ -46,6 +46,6 @@ Write-Output ""
 if ($failCount -eq 0) {
     Write-Output "CHECK Chrome Policies : PASS"
 } else {
-    Write-Output "CHECK Chrome Policies : FAIL — $failCount setting(s) non-compliant"
+    Write-Output "CHECK Chrome Policies : FAIL -- $failCount setting(s) non-compliant"
     exit 1
 }

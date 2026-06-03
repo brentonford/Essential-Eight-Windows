@@ -1,4 +1,4 @@
-# ISM-1485, ISM-1486, ISM-1585 — Mozilla Firefox
+# ISM-1485, ISM-1486, ISM-1585 -- Mozilla Firefox
 # Firefox supports Windows registry policies from Firefox 60+.
 # Registry path: HKLM:\SOFTWARE\Policies\Mozilla\Firefox
 # Java NPAPI is not supported in Firefox 52+.
@@ -13,7 +13,7 @@ $firefoxInstalled = $firefoxExe | Where-Object { Test-Path $_ }
 
 if (-not $firefoxInstalled) {
     Write-Output "Mozilla Firefox not detected on this server."
-    Write-Output "Firefox policy configuration skipped — not applicable."
+    Write-Output "Firefox policy configuration skipped -- not applicable."
     exit 0
 }
 

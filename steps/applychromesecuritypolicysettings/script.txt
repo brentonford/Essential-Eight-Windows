@@ -1,4 +1,4 @@
-# ISM-1485, ISM-1486, ISM-1585 — Google Chrome
+# ISM-1485, ISM-1486, ISM-1585 -- Google Chrome
 # Chrome policies live at HKLM:\SOFTWARE\Policies\Google\Chrome
 # Exits cleanly with documented skip if Chrome is not installed.
 # Java NPAPI is not supported in Chrome 45+.
@@ -12,7 +12,7 @@ $chromeInstalled = $chromeExe | Where-Object { Test-Path $_ }
 
 if (-not $chromeInstalled) {
     Write-Output "Google Chrome not detected on this server."
-    Write-Output "Chrome policy configuration skipped — not applicable."
+    Write-Output "Chrome policy configuration skipped -- not applicable."
     exit 0
 }
 
@@ -24,7 +24,7 @@ if (-not (Test-Path $chromePath)) {
 }
 
 $chromeSettings = @{
-    # Safe Browsing — blocks phishing, malicious downloads, malicious ad networks
+    # Safe Browsing -- blocks phishing, malicious downloads, malicious ad networks
     SafeBrowsingEnabled                           = 1
     # Enhanced Safe Browsing
     SafeBrowsingProtectionLevel                   = 2

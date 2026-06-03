@@ -6,7 +6,7 @@ $iePolicyPath = "HKLM:\SOFTWARE\Policies\Microsoft\Internet Explorer\Main"
 $iePolicy     = (Get-ItemProperty -Path $iePolicyPath -Name "DisableInternetExplorer" -ErrorAction SilentlyContinue).DisableInternetExplorer
 $ieFeature    = Get-WindowsOptionalFeature -Online -FeatureName "Internet-Explorer-Optional-amd64" -ErrorAction SilentlyContinue
 $ieEnabled    = $null -ne $ieFeature -and $ieFeature.State -eq "Enabled"
-$ism1654      = if ($iePolicy -eq 1 -or -not $ieEnabled) { "PASS" } else { "FAIL" }
+$ism1654      = if ($iePolicy -eq 1 -or $ieFeature.State -in @("Disabled", "DisablePending", "NotPresent", $null)) { "PASS" } else { "FAIL" }
 
 # --- ISM-1486: Java ---
 $jrePresent = $false
@@ -47,7 +47,7 @@ $overallStatus  = if ($allStatuses -contains "FAIL") { "NON-COMPLIANT" } elseif 
 $separator = "=" * 60
 
 Write-Output $separator
-Write-Output "  ESSENTIAL EIGHT ML1 — USER APPLICATION HARDENING"
+Write-Output "  ESSENTIAL EIGHT ML1 -- USER APPLICATION HARDENING"
 Write-Output "  ASD Control: Mitigation Strategy 4"
 Write-Output "  ISM Controls: 1654, 1486, 1485, 1585"
 Write-Output "  Reference  : cyber.gov.au/essential-eight"
@@ -66,17 +66,17 @@ Write-Output "    Result            : $ism1654"
 Write-Output ""
 Write-Output "  [ISM-1486] Java Browser Plugin"
 Write-Output "    Java JRE installed: $jrePresent"
-Write-Output "    NPAPI browsers    : $(if ($ieEnabled) { 'IE11 ACTIVE — FAIL' } else { 'None active' })"
+Write-Output "    NPAPI browsers    : $(if ($ieEnabled) { 'IE11 ACTIVE -- FAIL' } else { 'None active' })"
 Write-Output "    Result            : $ism1486"
 Write-Output ""
-Write-Output "  [ISM-1485] No Web Advertisements — Edge"
+Write-Output "  [ISM-1485] No Web Advertisements -- Edge"
 Write-Output "    SmartScreenEnabled              : $edgeSS"
 Write-Output "    AdsSettingForIntrusiveAdsSites  : $edgeAds"
 Write-Output "    Result                          : $ism1485Edge"
 Write-Output "    NOTE: PARTIAL = registry controls in place."
 Write-Output "    Full compliance requires browser extension or network filtering."
 Write-Output ""
-Write-Output "  [ISM-1585] Browser Security Settings Locked — Edge"
+Write-Output "  [ISM-1585] Browser Security Settings Locked -- Edge"
 Write-Output "    SmartScreen policy-enforced         : $(if ($edgeSS -eq 1) { 'Yes' } else { 'No' })"
 Write-Output "    PreventSmartScreenPromptOverride    : $edgePrevent"
 Write-Output "    Result                              : $ism1585Edge"
@@ -105,6 +105,6 @@ if ($overallStatus -in @("NON-COMPLIANT", "PARTIAL COMPLIANCE")) {
     }
     if ($ism1585Edge -ne "PASS") {
         Write-Output "  - Run Configure Blueprint to apply Edge policy settings"
-        exit 1
     }
+    exit 1
 }

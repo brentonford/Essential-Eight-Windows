@@ -1,10 +1,10 @@
-# ISM-1485, ISM-1486, ISM-1585 — Microsoft Edge
+# ISM-1485, ISM-1486, ISM-1585 -- Microsoft Edge
 
 $edgePath    = "HKLM:\SOFTWARE\Policies\Microsoft\Edge"
 $edgePresent = Test-Path $edgePath
 
 if (-not $edgePresent) {
-    Write-Output "CHECK Edge Policies : FAIL — no Edge policy path found at HKLM:\SOFTWARE\Policies\Microsoft\Edge"
+    Write-Output "CHECK Edge Policies : FAIL -- no Edge policy path found at HKLM:\SOFTWARE\Policies\Microsoft\Edge"
     exit 1
 }
 
@@ -36,7 +36,7 @@ Write-Output ""
 if ($failCount -eq 0) {
     Write-Output "CHECK Edge Policies : PASS"
 } else {
-    Write-Output "CHECK Edge Policies : FAIL — $failCount setting(s) non-compliant"
+    Write-Output "CHECK Edge Policies : FAIL -- $failCount setting(s) non-compliant"
     exit 1
 }
 
