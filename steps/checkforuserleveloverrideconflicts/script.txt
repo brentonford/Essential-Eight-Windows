@@ -27,19 +27,18 @@ foreach ($version in $officeVersions) {
 
         if ($vbaWarnings -ne 4) {
             $overridesFound += "$app $version : HKCU VBAWarnings = $vbaWarnings"
-            Write-Output "WARN  HKCU override detected — $app $version : VBAWarnings = $vbaWarnings"
+            Write-Output "WARN  HKCU override detected -- $app $version : VBAWarnings = $vbaWarnings"
         }
     }
 }
 
 if ($overridesFound.Count -eq 0) {
-    Write-Output "CHECK User Override Conflicts : PASS — no conflicting HKCU macro settings detected"
+    Write-Output "CHECK User Override Conflicts : PASS -- no conflicting HKCU macro settings detected"
     exit 0
 }
 
 Write-Output ""
-Write-Output "CHECK User Override Conflicts : WARN — $($overridesFound.Count) HKCU setting(s) found that may conflict with policy"
+Write-Output "CHECK User Override Conflicts : WARN -- $($overridesFound.Count) HKCU setting(s) found that may conflict with policy"
 Write-Output "If HKLM policy path is correctly set, these HKCU values are overridden by policy."
 Write-Output "If policy path was NOT set, these HKCU values are the effective settings."
-
 exit 1

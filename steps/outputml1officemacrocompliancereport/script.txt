@@ -4,12 +4,6 @@ $reportDate = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
 $officeVersions = @("16.0", "15.0", "14.0")
 $officeApps     = @("Word", "Excel", "PowerPoint", "Access", "Publisher", "Outlook", "Visio", "Project")
 
-# Apps for which a given ISM check is not applicable.
-# Outlook does not honour BlockContentExecutionFromInternet or DisableTrustBar --
-# these settings are documented only for Word/Excel/PowerPoint/Access/Publisher/Visio/Project.
-$ism1488NotApplicable = @("Outlook")
-$ism1675NotApplicable = @("Outlook")
-
 # Detect installations
 $detectedApps = @()
 foreach ($version in $officeVersions) {
@@ -47,7 +41,7 @@ if ($detectedApps.Count -eq 0) {
 $results = @()
 
 foreach ($entry in $detectedApps) {
-    $policyPath   = "HKLM:\SOFTWARE\Policies\Microsoft\Office\$($entry.Version)\$($entry.App)\Security"
+    $policyPath = "HKLM:\SOFTWARE\Policies\Microsoft\Office\$($entry.Version)\$($entry.App)\Security"
     $policyExists = Test-Path $policyPath
 
     $vbaWarnings = if ($policyExists) {
@@ -58,39 +52,28 @@ foreach ($entry in $detectedApps) {
         (Get-ItemProperty -Path $policyPath -Name "BlockContentExecutionFromInternet" -ErrorAction SilentlyContinue).BlockContentExecutionFromInternet
     } else { $null }
 
+    $accessVbom = if ($policyExists) {
+        (Get-ItemProperty -Path $policyPath -Name "AccessVBOM" -ErrorAction SilentlyContinue).AccessVBOM
+    } else { $null }
+
     $disableTrustBar = if ($policyExists) {
         (Get-ItemProperty -Path $policyPath -Name "DisableTrustBar" -ErrorAction SilentlyContinue).DisableTrustBar
     } else { $null }
 
-    $ism1671Result = if ($vbaWarnings -eq 4)    { "PASS" } else { "FAIL" }
-    $ism1489Result = if ($policyExists)         { "PASS" } else { "FAIL" }
-
-    $ism1488Result = if ($entry.App -in $ism1488NotApplicable) {
-        "N/A"
-    } elseif ($blockInternet -eq 1) {
-        "PASS"
-    } else {
-        "FAIL"
-    }
-
-    $ism1675Result = if ($entry.App -in $ism1675NotApplicable) {
-        "N/A"
-    } elseif ($disableTrustBar -eq 1) {
-        "PASS"
-    } else {
-        "FAIL"
-    }
+    $ism1671Pass = $vbaWarnings -eq 4
+    $ism1488Pass = $blockInternet -eq 1
+    $ism1489Pass = $policyExists
+    $ism1675Pass = $disableTrustBar -eq 1
 
     $results += [PSCustomObject]@{
-        App     = "$($entry.App) $($entry.Version)"
-        ISM1671 = $ism1671Result
-        ISM1488 = $ism1488Result
-        ISM1489 = $ism1489Result
-        ISM1675 = $ism1675Result
+        App          = "$($entry.App) $($entry.Version)"
+        ISM1671      = if ($ism1671Pass) { "PASS" } else { "FAIL" }
+        ISM1488      = if ($ism1488Pass) { "PASS" } else { "FAIL" }
+        ISM1489      = if ($ism1489Pass) { "PASS" } else { "FAIL" }
+        ISM1675      = if ($ism1675Pass) { "PASS" } else { "FAIL" }
     }
 }
 
-# N/A does not count as FAIL toward overall status.
 $overallFail = $results | Where-Object {
     $_.ISM1671 -eq "FAIL" -or $_.ISM1488 -eq "FAIL" -or $_.ISM1489 -eq "FAIL" -or $_.ISM1675 -eq "FAIL"
 }
@@ -112,11 +95,11 @@ Write-Output "  Office installations detected: $($detectedApps.Count)"
 Write-Output ""
 Write-Output "  CHECKS PER APPLICATION"
 Write-Output ""
-Write-Output ("  {0,-30} {1,-8} {2,-8} {3,-8} {4,-8}" -f "Application", "ISM1671", "ISM1488", "ISM1489", "ISM1675")
-Write-Output ("  {0,-30} {1,-8} {2,-8} {3,-8} {4,-8}" -f ("-" * 28), "-------", "-------", "-------", "-------")
+Write-Output "  {0,-30} {1,-8} {2,-8} {3,-8} {4,-8}" -f "Application", "ISM1671", "ISM1488", "ISM1489", "ISM1675"
+Write-Output "  {0,-30} {1,-8} {2,-8} {3,-8} {4,-8}" -f ("-" * 28), "-------", "-------", "-------", "-------"
 
 foreach ($r in $results) {
-    Write-Output ("  {0,-30} {1,-8} {2,-8} {3,-8} {4,-8}" -f $r.App, $r.ISM1671, $r.ISM1488, $r.ISM1489, $r.ISM1675)
+    Write-Output "  {0,-30} {1,-8} {2,-8} {3,-8} {4,-8}" -f $r.App, $r.ISM1671, $r.ISM1488, $r.ISM1489, $r.ISM1675
 }
 
 Write-Output ""

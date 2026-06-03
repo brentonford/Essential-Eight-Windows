@@ -16,21 +16,28 @@ foreach ($version in $officeVersions) {
 
         $totalChecked++
         $policyPath = "HKLM:\SOFTWARE\Policies\Microsoft\Office\$version\$app\Security"
-        $value = (Get-ItemProperty -Path $policyPath -Name "BlockContentExecutionFromInternet" -ErrorAction SilentlyContinue).BlockContentExecutionFromInternet
 
-        if ($value -ne 1) {
-            Write-Output "FAIL  BlockContentExecutionFromInternet — $app $version : value is '$value' (required: 1)"
+        if (-not (Test-Path $policyPath)) {
+            Write-Output "FAIL  BlockContentExecutionFromInternet -- $app $version : policy path does not exist (ISM-1489 gap)"
             $totalFailed++
             continue
         }
 
-        Write-Output "PASS  BlockContentExecutionFromInternet — $app $version"
+        $value = (Get-ItemProperty -Path $policyPath -Name "BlockContentExecutionFromInternet" -ErrorAction SilentlyContinue).BlockContentExecutionFromInternet
+
+        if ($value -ne 1) {
+            Write-Output "FAIL  BlockContentExecutionFromInternet -- $app $version : value is '$value' (required: 1)"
+            $totalFailed++
+            continue
+        }
+
+        Write-Output "PASS  BlockContentExecutionFromInternet -- $app $version"
     }
 }
 
 Write-Output ""
 Write-Output "CHECK Internet Macro Block : $($totalChecked - $totalFailed)/$totalChecked passed"
 
-if ($totalFailed -gt 0 ) {
+if ($totalFailed -gt 0) {
     exit 1
 }

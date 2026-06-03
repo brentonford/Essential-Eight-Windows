@@ -1,6 +1,6 @@
 # ISM-1671 / ISM-1489
 # Compliant value: 4 (disable all macros without notification)
-# Written to the policy path (HKLM:\SOFTWARE\Policies\) — not the user path.
+# Written to the policy path (HKLM:\SOFTWARE\Policies\) -- not the user path.
 
 $officeVersions = @("16.0", "15.0", "14.0")
 $officeApps     = @("Word", "Excel", "PowerPoint", "Access", "Publisher", "Outlook", "Visio", "Project")
@@ -19,7 +19,7 @@ foreach ($version in $officeVersions) {
         $policyPath = "HKLM:\SOFTWARE\Policies\Microsoft\Office\$version\$app\Security"
 
         if (-not (Test-Path $policyPath)) {
-            Write-Output "FAIL  VBAWarnings — $app $version : policy path does not exist (ISM-1489 gap)"
+            Write-Output "FAIL  VBAWarnings -- $app $version : policy path does not exist (ISM-1489 gap)"
             $totalFailed++
             continue
         }
@@ -27,24 +27,24 @@ foreach ($version in $officeVersions) {
         $value = (Get-ItemProperty -Path $policyPath -Name "VBAWarnings" -ErrorAction SilentlyContinue).VBAWarnings
 
         if ($null -eq $value) {
-            Write-Output "FAIL  VBAWarnings — $app $version : key not set at policy path"
+            Write-Output "FAIL  VBAWarnings -- $app $version : key not set at policy path"
             $totalFailed++
             continue
         }
 
         if ($value -ne 4) {
-            Write-Output "FAIL  VBAWarnings — $app $version : value is $value (required: 4)"
+            Write-Output "FAIL  VBAWarnings -- $app $version : value is $value (required: 4)"
             $totalFailed++
             continue
         }
 
-        Write-Output "PASS  VBAWarnings — $app $version : value is $value"
+        Write-Output "PASS  VBAWarnings -- $app $version : value is $value"
     }
 }
 
 Write-Output ""
 Write-Output "CHECK VBAWarnings : $($totalChecked - $totalFailed)/$totalChecked passed"
 
-if ($totalFailed -gt 0 ) {
+if ($totalFailed -gt 0) {
     exit 1
 }

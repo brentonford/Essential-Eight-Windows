@@ -3,7 +3,7 @@
 #
 # VBAWarnings values:
 #   1 = Enable all macros (non-compliant)
-#   2 = Disable with notification — user can override (non-compliant for ISM-1489)
+#   2 = Disable with notification -- user can override (non-compliant for ISM-1489)
 #   3 = Disable all except digitally signed (ML2 requirement)
 #   4 = Disable all macros without notification (ML1 requirement)
 #

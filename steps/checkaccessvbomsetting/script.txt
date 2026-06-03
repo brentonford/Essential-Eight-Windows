@@ -13,21 +13,28 @@ foreach ($version in $officeVersions) {
 
         $totalChecked++
         $policyPath = "HKLM:\SOFTWARE\Policies\Microsoft\Office\$version\$app\Security"
-        $value = (Get-ItemProperty -Path $policyPath -Name "AccessVBOM" -ErrorAction SilentlyContinue).AccessVBOM
 
-        if ($value -ne 0) {
-            Write-Output "FAIL  AccessVBOM — $app $version : value is '$value' (required: 0)"
+        if (-not (Test-Path $policyPath)) {
+            Write-Output "FAIL  AccessVBOM -- $app $version : policy path does not exist (ISM-1489 gap)"
             $totalFailed++
             continue
         }
 
-        Write-Output "PASS  AccessVBOM — $app $version"
+        $value = (Get-ItemProperty -Path $policyPath -Name "AccessVBOM" -ErrorAction SilentlyContinue).AccessVBOM
+
+        if ($value -ne 0) {
+            Write-Output "FAIL  AccessVBOM -- $app $version : value is '$value' (required: 0)"
+            $totalFailed++
+            continue
+        }
+
+        Write-Output "PASS  AccessVBOM -- $app $version"
     }
 }
 
 Write-Output ""
 Write-Output "CHECK AccessVBOM : $($totalChecked - $totalFailed)/$totalChecked passed"
 
-if ($totalFailed -gt 0 ) {
+if ($totalFailed -gt 0) {
     exit 1
 }

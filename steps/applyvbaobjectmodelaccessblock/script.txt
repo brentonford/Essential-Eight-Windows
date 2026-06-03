@@ -1,5 +1,5 @@
 # AccessVBOM = 0 prevents programmatic access to the VBA object model.
-# This stops macros from modifying other macros at runtime — a common
+# This stops macros from modifying other macros at runtime -- a common
 # technique used by macro-based malware to inject secondary payloads.
 
 $officeVersions = @("16.0", "15.0", "14.0")

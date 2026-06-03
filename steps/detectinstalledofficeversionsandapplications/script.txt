@@ -10,21 +10,20 @@ foreach ($version in $officeVersions) {
             continue
         }
         $detected += [PSCustomObject]@{
-            Version = $version
-            App     = $app
-            RegBase = "HKLM:\SOFTWARE\Policies\Microsoft\Office\$version\$app\Security"
+            Version    = $version
+            App        = $app
+            PolicyPath = "HKLM:\SOFTWARE\Policies\Microsoft\Office\$version\$app\Security"
         }
-        Write-Output "Detected: Office $version — $app"
+        Write-Output "Detected: Office $version -- $app"
     }
 }
 
 if ($detected.Count -eq 0) {
     Write-Output ""
-    Write-Output "No Microsoft Office installation detected on this server."
+    Write-Output "No Microsoft Office installation detected."
     Write-Output "E3 STATUS: NOT APPLICABLE"
-    Write-Output "No configuration required. Document this result in the compliance report."
     exit 0
 }
 
 Write-Output ""
-Write-Output "Total Office app registrations detected: $($detected.Count)"
+Write-Output "Office app registrations found: $($detected.Count)"
