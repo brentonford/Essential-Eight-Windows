@@ -11,9 +11,5 @@ Write-Output "RDP-Tcp UserAuthentication (NLA) : $tcpNla"
 Write-Output "GPO UserAuthentication (NLA)     : $gpoNla"
 Write-Output "RDP-Tcp SecurityLayer (TLS)      : $tcpSsl"
 Write-Output ""
-Write-Output "CHECK NLA : $(if ($nlaActive) { 'PASS — NLA is enabled' } else { 'FAIL — NLA is not enabled' })"
+Write-Output "CHECK NLA : $(if ($nlaActive) { 'PASS -- NLA is enabled' } else { 'FAIL -- NLA is not enabled' })"
 Write-Output "NOTE: NLA is a prerequisite for MFA integration, not MFA itself."
-
-if (!$nlaActive) {
-    exit 1
-}

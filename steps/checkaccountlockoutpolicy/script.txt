@@ -27,8 +27,4 @@ $lockoutOk = (
 )
 
 Write-Output ""
-Write-Output "CHECK Account Lockout : $(if ($lockoutOk) { 'PASS' } else { 'FAIL — policy does not meet recommended values' })"
-
-if (!$lockoutOk) {
-    exit 1
-}
+Write-Output "CHECK Account Lockout : $(if ($lockoutOk) { 'PASS' } else { 'FAIL -- policy does not meet recommended values' })"

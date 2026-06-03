@@ -10,16 +10,16 @@
 #   4776: NTLM credential validation (domain controller / local SAM)
 
 $auditSettings = @(
-    @{ Subcategory = "Logon";                  Setting = "success,failure" },
-    @{ Subcategory = "Logoff";                 Setting = "success" },
-    @{ Subcategory = "Account Lockout";        Setting = "success,failure" },
-    @{ Subcategory = "Credential Validation";  Setting = "success,failure" },
-    @{ Subcategory = "Other Logon/Logoff Events"; Setting = "success,failure" }
+    "Logon",
+    "Logoff",
+    "Account Lockout",
+    "Credential Validation",
+    "Other Logon/Logoff Events"
 )
 
-foreach ($entry in $auditSettings) {
-    auditpol /set /subcategory:"$($entry.Subcategory)" /success:enable /failure:enable | Out-Null
-    Write-Output "Audit set: $($entry.Subcategory) — $($entry.Setting)"
+foreach ($sub in $auditSettings) {
+    auditpol /set /subcategory:"$sub" /success:enable /failure:enable | Out-Null
+    Write-Output "Audit set: $sub -- success,failure"
 }
 
 # Increase Security event log size to retain authentication history

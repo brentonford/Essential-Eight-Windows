@@ -18,9 +18,13 @@ foreach ($provider in $mfaProviders) {
 }
 
 Write-Output ""
-if ($detectedProviders.Count -gt 0) {
-    Write-Output "MFA provider detected: $($detectedProviders -join ', ')"
+$mfaCheck = if ($detectedProviders.Count -gt 0) {
+    "MFA provider detected: $($detectedProviders -join ', ')"
 } else {
-    Write-Output "No MFA provider detected. RDP sessions are single-factor only."
+    "No MFA provider detected. RDP sessions are single-factor only."
+}
+Write-Output $mfaCheck
+
+if ($detectedProviders.Count -eq 0) {
     exit 1
 }

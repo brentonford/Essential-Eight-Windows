@@ -1,47 +1,47 @@
 # WinRM is the remote management transport used by AttuneOps and PowerShell remoting.
-# Basic Authentication transmits credentials as base64-encoded plain text — it must
+# Basic Authentication transmits credentials as base64-encoded plain text -- it must
 # be disabled. Kerberos (domain-joined) or NTLM with NTLMv2 (workgroup) are acceptable.
 #
 # This step hardens the WinRM listener to disallow Basic and Digest auth,
 # require HTTPS or Kerberos/NTLM, and enforce NTLMv2-minimum authentication.
 
-$winrmAuthPaths = @{
-    Basic     = "WSMan:\localhost\Service\Auth\Basic"
-    Digest    = "WSMan:\localhost\Service\Auth\Digest"
-    Kerberos  = "WSMan:\localhost\Service\Auth\Kerberos"
-    Negotiate = "WSMan:\localhost\Service\Auth\Negotiate"
+# Disable Basic Authentication for WinRM service (server side)
+Set-Item -Path "WSMan:\localhost\Service\Auth\Basic"     -Value $false
+$basicVal = (Get-Item -Path "WSMan:\localhost\Service\Auth\Basic" -ErrorAction SilentlyContinue).Value
+Write-Output "WinRM Basic    : set to $basicVal (disabled)"
+
+# Digest path is absent on Server 2022 when not explicitly enabled -- treat as disabled
+$digestPath = "WSMan:\localhost\Service\Auth\Digest"
+if (Test-Path $digestPath) {
+    Set-Item -Path $digestPath -Value $false
+    $digestVal = (Get-Item -Path $digestPath -ErrorAction SilentlyContinue).Value
+    Write-Output "WinRM Digest   : set to $digestVal (disabled)"
+} else {
+    Write-Output "WinRM Digest   : path not present -- treating as disabled, skipping."
 }
 
-$disableAuth = @("Basic", "Digest")
-$enableAuth  = @("Kerberos", "Negotiate")
+Set-Item -Path "WSMan:\localhost\Service\Auth\Kerberos"  -Value $true
+$kerberosVal = (Get-Item -Path "WSMan:\localhost\Service\Auth\Kerberos" -ErrorAction SilentlyContinue).Value
+Write-Output "WinRM Kerberos : set to $kerberosVal (enabled)"
 
-foreach ($name in $disableAuth) {
-    $path = $winrmAuthPaths[$name]
-    $existing = Get-Item -Path $path -ErrorAction SilentlyContinue
-    if ($null -eq $existing) {
-        Write-Output "WinRM $name : path not present — treating as disabled, skipping."
-        continue
-    }
-    Set-Item -Path $path -Value $false
-    Write-Output "WinRM $name : set to false (disabled)"
-}
+Set-Item -Path "WSMan:\localhost\Service\Auth\Negotiate" -Value $true
+$negotiateVal = (Get-Item -Path "WSMan:\localhost\Service\Auth\Negotiate" -ErrorAction SilentlyContinue).Value
+Write-Output "WinRM Negotiate: set to $negotiateVal (enabled)"
 
-foreach ($name in $enableAuth) {
-    $path = $winrmAuthPaths[$name]
-    $existing = Get-Item -Path $path -ErrorAction SilentlyContinue
-    if ($null -eq $existing) {
-        Write-Output "WinRM $name : path not present — skipping."
-        continue
-    }
-    Set-Item -Path $path -Value $true
-    Write-Output "WinRM $name : set to true (enabled)"
-}
-
+# Enforce NTLMv2 minimum via LAN Manager Authentication Level
 $lmPath = "HKLM:\SYSTEM\CurrentControlSet\Control\Lsa"
+# LmCompatibilityLevel values:
+#   0-1 = LM + NTLM allowed (insecure)
+#   2   = NTLM only (no LM)
+#   3   = NTLMv2 only
+#   4   = NTLMv2 only, refuse LM from clients
+#   5   = NTLMv2 only, refuse LM and NTLM from clients
+# Value 5 is most secure but may break legacy clients. Value 3 is recommended minimum.
 Set-ItemProperty -Path $lmPath -Name "LmCompatibilityLevel" -Value 5 -Type DWord
 Write-Output ""
 Write-Output "LAN Manager authentication level set to 5 (NTLMv2 only, refuse LM and NTLM)."
 
+# Disable NTLM hash storage (NoLMHash)
 Set-ItemProperty -Path $lmPath -Name "NoLMHash" -Value 1 -Type DWord
 Write-Output "LM hash storage disabled (NoLMHash = 1)."
 

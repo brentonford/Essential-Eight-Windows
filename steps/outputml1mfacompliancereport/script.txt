@@ -8,55 +8,48 @@ $tcpNla     = (Get-ItemProperty -Path $rdpTcpPath -Name "UserAuthentication" -Er
 $gpoNla     = (Get-ItemProperty -Path $rdpGpoPath -Name "UserAuthentication" -ErrorAction SilentlyContinue).UserAuthentication
 $nlaCheck   = if ($tcpNla -eq 1 -or $gpoNla -eq 1) { "PASS" } else { "FAIL" }
 
-# Lockout check — null-safe parse
+# Lockout check
 $seceditExport = "$env:TEMP\secpol_report_mfa.cfg"
 secedit /export /cfg $seceditExport /quiet
-$content = Get-Content $seceditExport -ErrorAction SilentlyContinue
-
-$getSeceditValue = {
-    param([string]$key)
-    $line = $content | Where-Object { $_ -match "^$key\s*=" }
-    if ($null -eq $line -or $line.Count -eq 0) { return "Not set" }
-    ($line -split '=')[1].Trim()
-}
-
-$lockoutCount = & $getSeceditValue "LockoutBadCount"
-$lockoutDur   = & $getSeceditValue "LockoutDuration"
+$seceditContent = Get-Content $seceditExport
+$lockoutCount   = (($seceditContent | Where-Object { $_ -match "^LockoutBadCount" }) -split '=')[1].Trim()
+$lockoutDur     = (($seceditContent | Where-Object { $_ -match "^LockoutDuration" }) -split '=')[1].Trim()
 Remove-Item $seceditExport -Force -ErrorAction SilentlyContinue
+$lockoutCheck   = if ([int]$lockoutCount -le 5 -and [int]$lockoutCount -gt 0 -and [int]$lockoutDur -ge 30) { "PASS" } else { "FAIL" }
 
-$lockoutCheck = if (
-    $lockoutCount -ne "Not set" -and $lockoutDur -ne "Not set" -and
-    [int]$lockoutCount -le 5 -and [int]$lockoutCount -gt 0 -and
-    [int]$lockoutDur -ge 30
-) { "PASS" } else { "FAIL" }
-
-# WinRM check
-$isDisabled = {
-    param($val)
-    $null -eq $val -or $val -in @("false", $false, "False")
-}
-
-$basicDisabled  = & $isDisabled $basicAuth
-$digestDisabled = & $isDisabled $digestAuth
-$ntlmHardened   = [int]$lmLevel -ge 3 -and $noLmHash -eq 1
-
-Write-Output "Basic disabled  : $basicDisabled"
-Write-Output "Digest disabled : $digestDisabled (null treated as disabled)"
-
-$winrmCheck = if ($basicDisabled -and $digestDisabled -and $ntlmHardened) { "PASS" } else { "FAIL" }
+# WinRM check -- null-safe for Digest (path absent on Server 2022 = disabled)
+$lsaPath      = "HKLM:\SYSTEM\CurrentControlSet\Control\Lsa"
+$basicAuth    = (Get-Item -Path "WSMan:\localhost\Service\Auth\Basic"  -ErrorAction SilentlyContinue).Value
+$digestAuth   = (Get-Item -Path "WSMan:\localhost\Service\Auth\Digest" -ErrorAction SilentlyContinue).Value
+$lmLevel      = (Get-ItemProperty -Path $lsaPath -Name "LmCompatibilityLevel" -ErrorAction SilentlyContinue).LmCompatibilityLevel
+$noLmHash     = (Get-ItemProperty -Path $lsaPath -Name "NoLMHash"             -ErrorAction SilentlyContinue).NoLMHash
+$basicDisabled  = ($basicAuth  -eq "false") -or ($basicAuth  -eq $false)
+$digestDisabled = ($null -eq $digestAuth)   -or ($digestAuth -eq "false") -or ($digestAuth -eq $false)
+$ntlmHardened   = ($null -ne $lmLevel) -and ([int]$lmLevel -ge 3) -and ($null -ne $noLmHash) -and ([int]$noLmHash -eq 1)
+$winrmCheck     = if ($basicDisabled -and $digestDisabled -and $ntlmHardened) { "PASS" } else { "FAIL" }
 
 # Audit check
 $logonAudit = auditpol /get /subcategory:"Logon" 2>&1 | Where-Object { $_ -match "Logon" }
 $auditCheck = if ($logonAudit -match "Success and Failure") { "PASS" } else { "FAIL" }
 
-# MFA provider
-$mfaPaths    = @("$env:ProgramFiles\Duo Security Authentication Proxy", "$env:ProgramFiles\Microsoft\AzureMfa")
-$mfaDetected = $mfaPaths | Where-Object { Test-Path $_ }
-$mfaStatus   = if ($mfaDetected) { "DETECTED" } else { "Not detected" }
+# MFA provider -- check both filesystem and registry (mirrors Verify Step 5)
+$mfaProviders = @(
+    @{ Name = "Duo Security Authentication Proxy"; TestPath = "$env:ProgramFiles\Duo Security Authentication Proxy"; RegPath = "HKLM:\SOFTWARE\Duo Security" },
+    @{ Name = "Azure MFA NPS Extension";           TestPath = "$env:ProgramFiles\Microsoft\AzureMfa";              RegPath = "HKLM:\SOFTWARE\Microsoft\AzureMfa" },
+    @{ Name = "Windows Hello for Business (GPO)";  TestPath = $null;                                               RegPath = "HKLM:\SOFTWARE\Policies\Microsoft\PassportForWork" },
+    @{ Name = "NPS Role (RADIUS server)";          TestPath = $null;                                               RegPath = "HKLM:\SYSTEM\CurrentControlSet\Services\IAS" }
+)
+$detectedMfa = @()
+foreach ($provider in $mfaProviders) {
+    $found = ($null -ne $provider.TestPath -and (Test-Path $provider.TestPath)) -or
+             ($null -ne $provider.RegPath  -and (Test-Path $provider.RegPath))
+    if ($found) { $detectedMfa += $provider.Name }
+}
+$mfaStatus = if ($detectedMfa.Count -gt 0) { "DETECTED: $($detectedMfa -join ', ')" } else { "Not detected" }
 
-# Overall
-$techChecks  = @($nlaCheck, $lockoutCheck, $winrmCheck, $auditCheck)
-$techStatus  = if ($techChecks -contains "FAIL") { "TECHNICAL GAPS -- see details" } else { "TECHNICAL PREREQUISITES MET" }
+# Overall technical status
+$techChecks = @($nlaCheck, $lockoutCheck, $winrmCheck, $auditCheck)
+$techStatus = if ($techChecks -contains "FAIL") { "TECHNICAL GAPS -- see details" } else { "TECHNICAL PREREQUISITES MET" }
 
 $separator = "=" * 60
 
@@ -89,7 +82,8 @@ Write-Output "    LockoutDuration  : $lockoutDur min (required: >= 30)"
 Write-Output "    Result           : $lockoutCheck"
 Write-Output ""
 Write-Output "  [WinRM] Authentication Hardening"
-Write-Output "    Basic auth disabled  : $($basicAuth -eq 'false' -or $basicAuth -eq $false)"
+Write-Output "    Basic auth disabled  : $basicDisabled"
+Write-Output "    Digest auth disabled : $digestDisabled (null treated as disabled)"
 Write-Output "    LmCompatibilityLevel : $lmLevel (required: >= 3)"
 Write-Output "    NoLMHash             : $noLmHash (required: 1)"
 Write-Output "    Result               : $winrmCheck"
@@ -130,6 +124,6 @@ Write-Output ""
 Write-Output "  Attach completed checklist evidence to this report to close ML1 MFA."
 Write-Output $separator
 
-if ($techStatus -ne "TECHNICAL PREREQUISITES MET") {
+if ($techChecks -contains "FAIL" -or $detectedMfa.Count -eq 0) {
     exit 1
 }

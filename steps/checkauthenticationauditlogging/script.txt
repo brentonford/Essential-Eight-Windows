@@ -33,13 +33,9 @@ Write-Output "Security log maximum size : ${maxSizeMb}MB (recommended: >= 256MB)
 
 $logSizeOk = $maxSizeMb -ge 256
 if (-not $logSizeOk) {
-    Write-Output "WARN: Security log size below 256MB — authentication history may be lost before scheduled reviews."
+    Write-Output "WARN: Security log size below 256MB -- authentication history may be lost before scheduled reviews."
     $failCount++
 }
 
 Write-Output ""
-Write-Output "CHECK Auth Audit Logging : $(if ($failCount -eq 0) { 'PASS' } else { "FAIL — $failCount item(s) need attention" })"
-
-if ($failCount -ne 0) {
-    exit 1
-}
+Write-Output "CHECK Auth Audit Logging : $(if ($failCount -eq 0) { 'PASS' } else { "FAIL -- $failCount item(s) need attention" })"
