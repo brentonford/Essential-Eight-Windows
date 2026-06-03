@@ -1,6 +1,8 @@
 $os          = Get-CimInstance -ClassName Win32_OperatingSystem
 $buildNumber = [int]$os.BuildNumber
 
+# Includes both Server and Desktop builds.
+# Configure step and Verify step must use the same table.
 $lifecycleTable = @(
     @{ Build = 20348; Name = "Windows Server 2022";    ExtendedEnd = "2031-10-14"; Status = "SUPPORTED" },
     @{ Build = 17763; Name = "Windows Server 2019";    ExtendedEnd = "2029-01-09"; Status = "SUPPORTED" },
@@ -8,7 +10,12 @@ $lifecycleTable = @(
     @{ Build = 9600;  Name = "Windows Server 2012 R2"; ExtendedEnd = "2023-10-10"; Status = "END OF LIFE" },
     @{ Build = 9200;  Name = "Windows Server 2012";    ExtendedEnd = "2023-10-10"; Status = "END OF LIFE" },
     @{ Build = 7601;  Name = "Windows Server 2008 R2"; ExtendedEnd = "2020-01-14"; Status = "END OF LIFE" },
-    @{ Build = 6002;  Name = "Windows Server 2008";    ExtendedEnd = "2020-01-14"; Status = "END OF LIFE" }
+    @{ Build = 6002;  Name = "Windows Server 2008";    ExtendedEnd = "2020-01-14"; Status = "END OF LIFE" },
+    @{ Build = 26100; Name = "Windows 11 24H2";        ExtendedEnd = "2026-10-13"; Status = "SUPPORTED" },
+    @{ Build = 22631; Name = "Windows 11 23H2";        ExtendedEnd = "2025-11-11"; Status = "END OF LIFE" },
+    @{ Build = 22621; Name = "Windows 11 22H2";        ExtendedEnd = "2024-10-08"; Status = "END OF LIFE" },
+    @{ Build = 19045; Name = "Windows 10 22H2";        ExtendedEnd = "2025-10-14"; Status = "END OF LIFE" },
+    @{ Build = 19044; Name = "Windows 10 21H2";        ExtendedEnd = "2024-06-11"; Status = "END OF LIFE" }
 )
 
 $match = $lifecycleTable | Where-Object { $_.Build -eq $buildNumber }
@@ -18,17 +25,18 @@ Write-Output "OS Version   : $($os.Version)"
 Write-Output "Build Number : $buildNumber"
 
 if ($null -eq $match) {
-    Write-Output "CHECK ISM-1501 OS Lifecycle : UNKNOWN — build not in lifecycle table"
+    Write-Output "CHECK ISM-1501 OS Lifecycle : UNKNOWN -- build not in lifecycle table"
+    Write-Output "Verify support status at docs.microsoft.com/lifecycle"
     exit 0
 }
 
-Write-Output "Lifecycle    : $($match.Name) — support ends $($match.ExtendedEnd)"
+Write-Output "Lifecycle    : $($match.Name) -- support ends $($match.ExtendedEnd)"
 
 if ($match.Status -eq "END OF LIFE") {
-    Write-Output "CHECK ISM-1501 OS Lifecycle : FAIL — END OF LIFE"
+    Write-Output "CHECK ISM-1501 OS Lifecycle : FAIL -- END OF LIFE"
     exit 1
 }
 
 $daysToEoL  = ([datetime]$match.ExtendedEnd - (Get-Date)).Days
-$eolWarning = if ($daysToEoL -lt 180) { " — WARNING: $daysToEoL days to EoL" } else { "" }
+$eolWarning = if ($daysToEoL -lt 180) { " -- WARNING: $daysToEoL days to EoL" } else { "" }
 Write-Output "CHECK ISM-1501 OS Lifecycle : PASS$eolWarning"

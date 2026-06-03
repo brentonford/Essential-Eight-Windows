@@ -1,5 +1,5 @@
 $moduleName = "PSWindowsUpdate"
-$module = Get-Module -ListAvailable -Name $moduleName
+$module     = Get-Module -ListAvailable -Name $moduleName
 
 if ($null -ne $module) {
     Write-Output "PSWindowsUpdate module version $($module.Version) is already installed."

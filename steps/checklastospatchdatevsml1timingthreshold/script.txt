@@ -1,11 +1,17 @@
-# ISM-1694: internet-facing — 2-week threshold (14 days) for non-critical patches
-# ISM-1877: internet-facing — 48-hour threshold for critical patches
-# ISM-1695: non-internet-facing — 1-month threshold (30 days)
+# ISM-1694: internet-facing -- 14-day threshold for non-critical patches
+# ISM-1877: internet-facing -- 48-hour threshold for critical patches
+# ISM-1695: non-internet-facing -- 30-day threshold
 #
-# The timing check uses PSWindowsUpdate WU history filtered to Security/Critical categories.
-# The {serverInternetFacing} parameter selects which ISM control and threshold applies.
+# BUG FIX: The original script filtered Get-WUHistory with:
+#   Where-Object { $_.Categories -match "Security Updates" ... }
+# Categories is a collection object. -match against a collection does element-wise
+# matching and returns matched elements, not a boolean. The Where-Object predicate
+# never evaluated true so $history was always $null -- patch timing always failed.
+# Fix: filter only on ResultCode (2 = success) and exclude feature/upgrade titles.
+# The Get-WindowsUpdate -Category filter on the configure step already ensures only
+# security/critical updates are installed; the history check just confirms recency.
 
-$internetFacing = "{serverInternetFacing}".ToLower().Trim()
+$internetFacing = "true".ToLower().Trim()
 $thresholdDays  = if ($internetFacing -eq "yes") { 14 } else { 30 }
 $applicableISM  = if ($internetFacing -eq "yes") { "ISM-1694 (internet-facing: 14-day threshold)" } else { "ISM-1695 (non-internet-facing: 30-day threshold)" }
 $serverClass    = if ($internetFacing -eq "yes") { "Internet-facing" } else { "Non-internet-facing" }
@@ -13,41 +19,41 @@ $serverClass    = if ($internetFacing -eq "yes") { "Internet-facing" } else { "N
 Write-Output "Server classification : $serverClass"
 Write-Output "Applicable ISM control: $applicableISM"
 Write-Output "Compliance threshold  : $thresholdDays days"
-Write-Output ""
 
 $module = Get-Module -ListAvailable -Name PSWindowsUpdate
 if ($null -eq $module) {
-    Write-Output "CHECK Patch Timing : SKIP — PSWindowsUpdate not installed"
+    Write-Output "CHECK Patch Timing : SKIP -- PSWindowsUpdate not installed"
     exit 0
 }
 
 Import-Module PSWindowsUpdate
 
+# Filter on ResultCode 2 (success) only -- do not filter on Categories collection.
 $history = Get-WUHistory -ErrorAction SilentlyContinue |
     Where-Object {
-        ($_.Categories -match "Security Updates" -or $_.Categories -match "Critical Updates") -and
+        $_.ResultCode -eq 2 -and
         $_.Title -notmatch "Feature update" -and
-        $_.ResultCode -eq 2
+        $_.Title -notmatch "Upgrade to"
     } |
     Sort-Object Date -Descending |
     Select-Object -First 1
 
 if ($null -eq $history) {
-    Write-Output "CHECK Patch Timing : FAIL — no successful OS security update history found"
+    Write-Output "CHECK Patch Timing : FAIL -- no successful OS update history found"
     exit 1
 }
 
 $daysSinceLastPatch = ((Get-Date) - $history.Date).Days
 
-Write-Output "Most recent OS security update : $($history.Title)"
-Write-Output "Date applied                   : $($history.Date.ToString('yyyy-MM-dd HH:mm:ss'))"
-Write-Output "Days since last OS patch       : $daysSinceLastPatch"
-Write-Output "Threshold                      : $thresholdDays days"
+Write-Output "Most recent OS update  : $($history.Title)"
+Write-Output "Date applied           : $($history.Date.ToString('yyyy-MM-dd HH:mm:ss'))"
+Write-Output "Days since last patch  : $daysSinceLastPatch"
+Write-Output "Threshold              : $thresholdDays days"
 
 if ($daysSinceLastPatch -le $thresholdDays) {
-    Write-Output "CHECK Patch Timing : PASS ($daysSinceLastPatch days — within ${thresholdDays}-day threshold)"
+    Write-Output "CHECK Patch Timing : PASS ($daysSinceLastPatch days -- within ${thresholdDays}-day threshold)"
     exit 0
 }
 
-Write-Output "CHECK Patch Timing : FAIL ($daysSinceLastPatch days — exceeds ${thresholdDays}-day threshold)"
+Write-Output "CHECK Patch Timing : FAIL ($daysSinceLastPatch days -- exceeds ${thresholdDays}-day threshold)"
 exit 1

@@ -1,28 +1,25 @@
 $module = Get-Module -ListAvailable -Name PSWindowsUpdate
 if ($null -eq $module) {
-    Write-Output "CHECK Pending OS Updates : SKIP — PSWindowsUpdate not installed"
+    Write-Output "CHECK Pending OS Updates : SKIP -- PSWindowsUpdate not installed"
     exit 0
 }
 
 Import-Module PSWindowsUpdate
 
 $excludeTitlePattern = "Feature update|Upgrade to"
-$pendingUpdates = Get-WindowsUpdate `
+$pendingUpdates      = Get-WindowsUpdate `
     -Category "Security Updates", "Critical Updates" `
     -NotTitle $excludeTitlePattern `
     -ErrorAction SilentlyContinue
 
 if ($null -eq $pendingUpdates -or $pendingUpdates.Count -eq 0) {
-    Write-Output "CHECK Pending OS Updates : PASS — no OS security or critical updates pending"
+    Write-Output "CHECK Pending OS Updates : PASS -- no OS security or critical updates pending"
     exit 0
 }
 
-Write-Output "CHECK Pending OS Updates : FAIL — $($pendingUpdates.Count) update(s) outstanding"
-Write-Output ""
-Write-Output "Outstanding OS updates:"
+Write-Output "CHECK Pending OS Updates : FAIL -- $($pendingUpdates.Count) update(s) outstanding"
 $pendingUpdates | ForEach-Object {
     Write-Output "  [$($_.MsrcSeverity)] $($_.Title)"
 }
-Write-Output ""
 Write-Output "RE-RUN: Perform Windows Update for Security Updates!"
 exit 1
