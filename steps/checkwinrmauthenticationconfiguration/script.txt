@@ -29,3 +29,7 @@ Write-Output "  Digest disabled : $digestDisabled (null treated as disabled)"
 $winrmCheck = if ($basicDisabled -and $digestDisabled -and $ntlmHardened) { "PASS" } else { "FAIL" }
 Write-Output ""
 Write-Output "CHECK WinRM Auth : $winrmCheck"
+
+if ($winrmCheck -eq "FAIL") {
+    exit 1
+}

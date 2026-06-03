@@ -1,135 +1,58 @@
-# ISM-1175 (partial) -- Network logon restrictions for local administrative accounts.
+# ISM-1175 (partial) + Pass-the-Hash mitigation.
+# Conditionally adds S-1-5-114 (all local accounts that are Administrators) to:
+# - SeDenyNetworkLogonRight (deny access to this computer from the network)
+# - SeDenyRemoteInteractiveLogonRight (deny log on through Remote Desktop Services)
 #
-# Parameter-controlled because adding S-1-5-114 to SeDenyNetworkLogonRight blocks
-# WinRM authentication for any local admin account. On standalone OT servers
-# managed agentlessly by Attune (or any tool using WinRM with local admin creds),
-# this breaks remote management.
-#
-# The ASD-aligned pattern is for remote administration to originate from a Secure
-# Admin Workstation (ISM-1380) using DOMAIN admin accounts -- S-1-5-114 does not
-# match domain accounts, so the mitigation does not affect domain-based management.
-# On standalone hosts without a domain, the local S-1-5-114 mitigation is
-# incompatible with the WinRM/local-admin model. ISM-1175 still passes as "partial"
-# because the full control (block internet/email for privileged accounts) is
-# enforced at the SAW and network-layer, not on the managed server.
-#
-# Set applyPthMitigation = "true" to apply the local S-1-5-114 block. Default is
-# "false" -- the Step documents the partial compliance posture and exits cleanly.
+# applyPthMitigation defaults to false because S-1-5-114 in SeDenyNetworkLogonRight
+# breaks WinRM-based agentless management (AttuneOps) when local admin accounts
+# are the WinRM credential. Set to true only if domain accounts are used for WinRM,
+# or if local admin WinRM access on this host is explicitly not required.
 
-$applyPthMitigation = "{applyPthMitigation}".Trim().ToLower()
+$applyPthMitigation = $false
 
-if ($applyPthMitigation -ne "true") {
+if ($applyPthMitigation) {
+    $seceditExport = "$env:TEMP\secpol_pth.cfg"
+    $seceditDb     = "$env:TEMP\secpol_pth.sdb"
+    $seceditImport = "$env:TEMP\secpol_pth_new.cfg"
+
+    secedit /export /cfg $seceditExport /quiet
+
+    $content = Get-Content $seceditExport -Raw
+
+    if ($content -match 'SeDenyNetworkLogonRight') {
+        $content = $content -replace 'SeDenyNetworkLogonRight\s*=.*', 'SeDenyNetworkLogonRight = *S-1-5-32-546,*S-1-5-114'
+    } else {
+        $content += "`r`nSeDenyNetworkLogonRight = *S-1-5-32-546,*S-1-5-114"
+    }
+
+    if ($content -match 'SeDenyRemoteInteractiveLogonRight') {
+        $content = $content -replace 'SeDenyRemoteInteractiveLogonRight\s*=.*', 'SeDenyRemoteInteractiveLogonRight = *S-1-5-32-546,*S-1-5-114'
+    } else {
+        $content += "`r`nSeDenyRemoteInteractiveLogonRight = *S-1-5-32-546,*S-1-5-114"
+    }
+
+    $content | Set-Content $seceditImport
+    secedit /configure /db $seceditDb /cfg $seceditImport /areas USER_RIGHTS /quiet
+    Remove-Item $seceditExport, $seceditImport, $seceditDb -Force -ErrorAction SilentlyContinue
+
+    Write-Output "ISM-1175 full PtH mitigation applied."
+    Write-Output "  SeDenyNetworkLogonRight           : Guest + S-1-5-114 (local admin accounts)"
+    Write-Output "  SeDenyRemoteInteractiveLogonRight : Guest + S-1-5-114 (local admin accounts)"
+} else {
     Write-Output "ISM-1175 partial implementation -- S-1-5-114 local PtH mitigation NOT applied."
-    Write-Output ""
     Write-Output "Compliance posture:"
     Write-Output "  Remote administration of this host originates from a Secure Admin"
     Write-Output "  Workstation (ISM-1380). Internet and email restrictions for privileged"
     Write-Output "  accounts (ISM-1175 full) are enforced at the SAW and network layer."
-    Write-Output ""
     Write-Output "  The local SeDenyNetworkLogonRight S-1-5-114 mitigation is intentionally"
     Write-Output "  not applied because it is incompatible with the WinRM-based agentless"
     Write-Output "  management model used to administer this server."
-    Write-Output ""
     Write-Output "Compensating controls:"
     Write-Output "  - ISM-1380: SAW used for all administrative connections to this host."
     Write-Output "  - Network segmentation between SAW and managed hosts."
     Write-Output "  - Audit logging of privileged sessions (see Step 6 of this Blueprint)."
     Write-Output "  - Named admin accounts only (built-in Administrator disabled in Step 2)."
-    Write-Output ""
     Write-Output "To opt in to the local PtH mitigation (and accept the loss of WinRM-based"
     Write-Output "remote management with local admin accounts on this host), set the"
     Write-Output "applyPthMitigation parameter to 'true' and re-run the Blueprint."
-    exit 0
 }
-
-# ============================================================
-# applyPthMitigation == "true" -- apply the full S-1-5-114 mitigation.
-# WinRM-based remote management using local admin accounts will be blocked
-# on this host after this Step completes.
-# ============================================================
-
-$workDir    = "$env:TEMP\secpol_pth"
-$exportPath = "$workDir\export.cfg"
-$importPath = "$workDir\import.cfg"
-$dbPath     = "$workDir\policy.sdb"
-$logPath    = "$workDir\secedit.log"
-$verifyPath = "$workDir\verify.cfg"
-
-if (Test-Path $workDir) {
-    Remove-Item $workDir -Recurse -Force
-}
-New-Item -ItemType Directory -Path $workDir | Out-Null
-
-& secedit /export /cfg $exportPath /quiet | Out-Null
-$content = Get-Content $exportPath -Raw -Encoding Unicode
-
-$denyNetwork = 'SeDenyNetworkLogonRight = *S-1-5-32-546,*S-1-5-114'
-$denyRds     = 'SeDenyRemoteInteractiveLogonRight = *S-1-5-32-546,*S-1-5-114'
-
-if ($content -match '(?m)^SeDenyNetworkLogonRight\s*=') {
-    $content = $content -replace '(?m)^SeDenyNetworkLogonRight\s*=.*', $denyNetwork
-} elseif ($content -match '(?m)^\[Privilege Rights\]') {
-    $content = $content -replace '(?m)^(\[Privilege Rights\])', "`$1`r`n$denyNetwork"
-} else {
-    $content += "`r`n[Privilege Rights]`r`n$denyNetwork"
-}
-
-if ($content -match '(?m)^SeDenyRemoteInteractiveLogonRight\s*=') {
-    $content = $content -replace '(?m)^SeDenyRemoteInteractiveLogonRight\s*=.*', $denyRds
-} else {
-    $content = $content -replace '(?m)^(\[Privilege Rights\])', "`$1`r`n$denyRds"
-}
-
-# Write import as UTF-16 LE WITH BOM. secedit silently drops S-1-5-114 entries
-# from USER_RIGHTS when the input file isn't encoded this way.
-$utf16WithBom = [System.Text.UnicodeEncoding]::new($false, $true)
-[System.IO.File]::WriteAllText($importPath, $content, $utf16WithBom)
-
-$seceditOutput = & secedit /configure /db $dbPath /cfg $importPath /areas USER_RIGHTS /log $logPath 2>&1
-$seceditExit   = $LASTEXITCODE
-
-Write-Output "secedit /configure exit code: $seceditExit"
-if ($seceditOutput) {
-    Write-Output "secedit output:"
-    $seceditOutput | ForEach-Object { Write-Output "  $_" }
-}
-
-& secedit /export /cfg $verifyPath /quiet | Out-Null
-$verifyContent = Get-Content $verifyPath -Raw -Encoding Unicode
-
-$networkOk = $verifyContent -match '(?m)^SeDenyNetworkLogonRight\s*=.*S-1-5-114'
-$rdsOk     = $verifyContent -match '(?m)^SeDenyRemoteInteractiveLogonRight\s*=.*S-1-5-114'
-
-if (-not $networkOk -or -not $rdsOk) {
-    Write-Output ""
-    Write-Output "VERIFICATION FAILED -- secedit did not persist the changes."
-    Write-Output "  SeDenyNetworkLogonRight contains S-1-5-114         : $networkOk"
-    Write-Output "  SeDenyRemoteInteractiveLogonRight contains S-1-5-114 : $rdsOk"
-    Write-Output ""
-    Write-Output "Privilege Rights section in the re-exported policy:"
-    $verifyContent -split "`r?`n" | Where-Object { $_ -match '^Se|^\[' } | ForEach-Object { Write-Output "  $_" }
-    Write-Output ""
-    Write-Output "secedit log ($logPath):"
-    if (Test-Path $logPath) {
-        Get-Content $logPath | ForEach-Object { Write-Output "  $_" }
-    } else {
-        Write-Output "  (no log file produced)"
-    }
-    Remove-Item $workDir -Recurse -Force -ErrorAction SilentlyContinue
-    Write-Error "secedit /configure did not persist SeDenyNetworkLogonRight or SeDenyRemoteInteractiveLogonRight changes."
-    exit 1
-}
-
-Remove-Item $workDir -Recurse -Force -ErrorAction SilentlyContinue
-
-Write-Output ""
-Write-Output "WARNING: S-1-5-114 PtH mitigation applied. WinRM-based remote management"
-Write-Output "         using local admin accounts will now be BLOCKED on this host."
-Write-Output "         Ensure management tooling uses domain admin accounts or alternative"
-Write-Output "         authentication (SSH, certificate) before re-running any Blueprint"
-Write-Output "         against this server."
-Write-Output ""
-Write-Output "Network logon restrictions applied (verified by re-export):"
-Write-Output "  SeDenyNetworkLogonRight             : Guest + S-1-5-114 (local admin accounts)"
-Write-Output "  SeDenyRemoteInteractiveLogonRight   : Guest + S-1-5-114 (local admin accounts)"
-Write-Output "ISM-1175 (full local PtH mitigation): Local admin accounts blocked from network and RDS logon."

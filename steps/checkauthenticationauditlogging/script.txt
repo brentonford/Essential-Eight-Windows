@@ -39,3 +39,7 @@ if (-not $logSizeOk) {
 
 Write-Output ""
 Write-Output "CHECK Auth Audit Logging : $(if ($failCount -eq 0) { 'PASS' } else { "FAIL -- $failCount item(s) need attention" })"
+
+if ($failCount -gt 0) {
+    exit 1
+}

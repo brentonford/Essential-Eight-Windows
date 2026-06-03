@@ -3,7 +3,7 @@
 $builtInAdmin = Get-LocalUser | Where-Object { $_.SID.Value.EndsWith("-500") }
 
 if ($null -eq $builtInAdmin) {
-    Write-Output "CHECK ISM-0445 Built-In Admin : PASS — account not found (may have been removed)"
+    Write-Output "CHECK ISM-0445 Built-In Admin : PASS -- account not found (may have been removed)"
     exit 0
 }
 
@@ -11,8 +11,8 @@ Write-Output "Built-in Administrator name    : $($builtInAdmin.Name)"
 Write-Output "Built-in Administrator enabled : $($builtInAdmin.Enabled)"
 
 if ($builtInAdmin.Enabled) {
-    Write-Output "CHECK ISM-0445 Built-In Admin : FAIL — built-in Administrator account is enabled"
-    exit 0
+    Write-Output "CHECK ISM-0445 Built-In Admin : FAIL -- built-in Administrator account is enabled"
+    exit 1
 }
 
-Write-Output "CHECK ISM-0445 Built-In Admin : PASS — disabled"
+Write-Output "CHECK ISM-0445 Built-In Admin : PASS -- disabled"

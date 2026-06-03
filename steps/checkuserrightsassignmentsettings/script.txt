@@ -34,6 +34,10 @@ $localInteractiveOk = $interactiveLogon -match 'S-1-5-32-544'
 $networkDenyOk      = $denyNetwork -match 'S-1-5-114'
 $remoteDenyOk       = $denyRemote -match 'S-1-5-114'
 
-Write-Output "CHECK ISM-1688 Logon Rights  : $(if ($localInteractiveOk) { 'PASS' } else { 'FAIL — interactive logon not restricted to Administrators' })"
-Write-Output "CHECK ISM-1175 Network Deny  : $(if ($networkDenyOk) { 'PASS' } else { 'FAIL — S-1-5-114 not in deny network logon' })"
-Write-Output "CHECK ISM-1175 RDS Deny      : $(if ($remoteDenyOk) { 'PASS' } else { 'FAIL — S-1-5-114 not in deny RDS logon' })"
+Write-Output "CHECK ISM-1688 Logon Rights  : $(if ($localInteractiveOk) { 'PASS' } else { 'FAIL -- interactive logon not restricted to Administrators' })"
+Write-Output "CHECK ISM-1175 Network Deny  : $(if ($networkDenyOk) { 'PASS' } else { 'FAIL -- S-1-5-114 not in deny network logon' })"
+Write-Output "CHECK ISM-1175 RDS Deny      : $(if ($remoteDenyOk) { 'PASS' } else { 'FAIL -- S-1-5-114 not in deny RDS logon' })"
+
+if (-not $localInteractiveOk -or -not $networkDenyOk -or -not $remoteDenyOk) {
+    exit 1
+}

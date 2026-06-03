@@ -19,25 +19,13 @@ if (-not $builtInAdmin.Enabled) {
     exit 0
 }
 
-$adminMembers = Get-LocalGroupMember -Group "Administrators" -ErrorAction Stop
-
-$otherEnabledAdmins = @()
-foreach ($member in $adminMembers) {
-    if ($member.PrincipalSource -ne 'Local' -or $member.ObjectClass -ne 'User') {
-        continue
-    }
-
-    $localUser = Get-LocalUser -SID $member.SID -ErrorAction SilentlyContinue
-    if ($null -eq $localUser) {
-        continue
-    }
-    if (-not $localUser.Enabled) {
-        continue
-    }
-    if ($localUser.SID.Value.EndsWith("-500")) {
-        continue
-    }
-    $otherEnabledAdmins += $localUser
+$allAdmins          = Get-LocalGroupMember -Group "Administrators" -ErrorAction SilentlyContinue
+$otherEnabledAdmins = @($allAdmins) | Where-Object {
+    $memberName = $_.Name -replace '.*\\\\', ''
+    $localUser  = Get-LocalUser -Name $memberName -ErrorAction SilentlyContinue
+    $null -ne $localUser -and
+    $localUser.Enabled -eq $true -and
+    -not $localUser.SID.Value.EndsWith("-500")
 }
 
 if ($otherEnabledAdmins.Count -eq 0) {

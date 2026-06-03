@@ -3,34 +3,30 @@
 # accounts with very long password ages, accounts that appear to be standard
 # user accounts elevated to admin (no .admin / adm- naming convention).
 
-$adminMembers = Get-LocalGroupMember -Group "Administrators" -ErrorAction Stop
+$adminMembers = Get-LocalGroupMember -Group "Administrators" -ErrorAction SilentlyContinue
 
-Write-Output "Administrators group members: $($adminMembers.Count)"
+Write-Output "Administrators group members: $(@($adminMembers).Count)"
 Write-Output ""
 
 $flags = @()
 
 foreach ($member in $adminMembers) {
-    if ($member.PrincipalSource -ne 'Local' -or $member.ObjectClass -ne 'User') {
-        Write-Output "  $($member.Name) -- non-local ($($member.PrincipalSource) $($member.ObjectClass)) -- cannot audit locally"
-        continue
-    }
-
-    $account = Get-LocalUser -SID $member.SID -ErrorAction SilentlyContinue
+    $memberName = $member.Name -replace '.*\\', ''
+    $account    = Get-LocalUser -Name $memberName -ErrorAction SilentlyContinue
 
     if ($null -eq $account) {
-        Write-Output "  $($member.Name) -- local user lookup failed"
+        Write-Output "  $memberName -- domain/group account (cannot audit locally)"
         continue
     }
 
     $passwordAge = if ($account.PasswordLastSet) { ((Get-Date) - $account.PasswordLastSet).Days } else { 9999 }
     $isBuiltIn   = $account.SID.Value.EndsWith("-500")
-    $lastLogon   = if ($account.LastLogon)       { $account.LastLogon.ToString("yyyy-MM-dd") }   else { "Never" }
+    $lastLogon   = if ($account.LastLogon) { $account.LastLogon.ToString("yyyy-MM-dd") } else { "Never" }
 
     $accountFlags = @()
-    if ($isBuiltIn -and $account.Enabled) { $accountFlags += "BUILT-IN ENABLED" }
-    if ($passwordAge -gt 365)             { $accountFlags += "PASSWORD AGE ${passwordAge}d > 365d" }
-    if ($passwordAge -eq 9999)            { $accountFlags += "PASSWORD NEVER SET" }
+    if ($isBuiltIn -and $account.Enabled)              { $accountFlags += "BUILT-IN ENABLED" }
+    if ($passwordAge -gt 365)                           { $accountFlags += "PASSWORD AGE ${passwordAge}d > 365d" }
+    if ($passwordAge -eq 9999)                          { $accountFlags += "PASSWORD NEVER SET" }
 
     $status = if ($accountFlags.Count -gt 0) { "FLAG" } else { "OK" }
 

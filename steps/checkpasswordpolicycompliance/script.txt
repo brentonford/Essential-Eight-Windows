@@ -37,3 +37,7 @@ $passCheck = (
 
 Write-Output ""
 Write-Output "CHECK Password Policy : $(if ($passCheck) { 'PASS' } else { 'FAIL' })"
+
+if (-not $passCheck) {
+    exit 1
+}

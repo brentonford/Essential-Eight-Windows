@@ -1,33 +1,38 @@
 # Surfaces recent privileged account logon events from the Security event log.
 # Event 4672: Special privileges assigned to new logon (admin logon indicator)
-# Event 4624: Successful logon
 # Event 4625: Failed logon
-# Lookback: 7 days
+# Lookback: 7 days. MaxEvents cap per ID prevents timeout on busy servers.
 
-$cutoff = (Get-Date).AddDays(-7)
-$events = @()
+$cutoff    = (Get-Date).AddDays(-7)
+$maxEvents = 5000
 
-$eventIds = @(4672, 4625)
+$adminLogonEvents = Get-WinEvent -FilterHashtable @{
+    LogName   = "Security"
+    Id        = 4672
+    StartTime = $cutoff
+} -MaxEvents $maxEvents -ErrorAction SilentlyContinue
 
-foreach ($id in $eventIds) {
-    $found = Get-WinEvent -FilterHashtable @{
-        LogName   = "Security"
-        Id        = $id
-        StartTime = $cutoff
-    } -ErrorAction SilentlyContinue
+$failedLogonEvents = Get-WinEvent -FilterHashtable @{
+    LogName   = "Security"
+    Id        = 4625
+    StartTime = $cutoff
+} -MaxEvents $maxEvents -ErrorAction SilentlyContinue
 
-    if ($found) { $events += $found }
-}
-
-$adminLogons  = ($events | Where-Object { $_.Id -eq 4672 }).Count
-$failedLogons = ($events | Where-Object { $_.Id -eq 4625 }).Count
+$adminLogons  = if ($adminLogonEvents)  { @($adminLogonEvents).Count  } else { 0 }
+$failedLogons = if ($failedLogonEvents) { @($failedLogonEvents).Count } else { 0 }
 
 Write-Output "Privileged logon events (last 7 days):"
 Write-Output "  Privileged logons (4672) : $adminLogons"
 Write-Output "  Failed logons    (4625)  : $failedLogons"
 
+if ($adminLogons -ge $maxEvents -or $failedLogons -ge $maxEvents) {
+    Write-Output ""
+    Write-Output "NOTE: Result capped at $maxEvents events per ID. Actual count may be higher."
+}
+
 if ($failedLogons -gt 10) {
     Write-Output ""
     Write-Output "WARN: $failedLogons failed logon attempts in the last 7 days."
     Write-Output "Review Security event log for potential brute-force activity."
+    exit 1
 }

@@ -32,4 +32,8 @@ foreach ($sub in $subcategories) {
 }
 
 Write-Output ""
-Write-Output "CHECK Audit Policy : $(if ($failCount -eq 0) { 'PASS' } else { "FAIL — $failCount subcategory/ies need attention" })"
+Write-Output "CHECK Audit Policy : $(if ($failCount -eq 0) { 'PASS' } else { "FAIL -- $failCount subcategory/ies need attention" })"
+
+if ($failCount -gt 0) {
+    exit 1
+}

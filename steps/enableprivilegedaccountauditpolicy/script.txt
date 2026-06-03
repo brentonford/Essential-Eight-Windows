@@ -1,19 +1,19 @@
 # Enables granular audit policy for privileged account activity.
 # Required for incident detection and supports ISM-0445 governance.
-# Uses auditpol.exe — available on all Windows Server versions.
+# Uses auditpol.exe -- available on all Windows Server versions.
 
-$auditCategories = @(
-    @{ Category = "Logon/Logoff";      Subcategory = "Logon";                       Setting = "success,failure" },
-    @{ Category = "Logon/Logoff";      Subcategory = "Logoff";                      Setting = "success" },
-    @{ Category = "Account Logon";     Subcategory = "Credential Validation";       Setting = "success,failure" },
-    @{ Category = "Account Management";Subcategory = "User Account Management";     Setting = "success,failure" },
-    @{ Category = "Account Management";Subcategory = "Security Group Management";   Setting = "success,failure" },
-    @{ Category = "Privilege Use";     Subcategory = "Sensitive Privilege Use";     Setting = "success,failure" }
+$auditSubcategories = @(
+    "Logon",
+    "Logoff",
+    "Credential Validation",
+    "User Account Management",
+    "Security Group Management",
+    "Sensitive Privilege Use"
 )
 
-foreach ($entry in $auditCategories) {
-    $result = auditpol /set /subcategory:"$($entry.Subcategory)" /success:enable /failure:enable 2>&1
-    Write-Output "Audit policy set: $($entry.Subcategory) — $($entry.Setting)"
+foreach ($sub in $auditSubcategories) {
+    auditpol /set /subcategory:"$sub" /success:enable /failure:enable | Out-Null
+    Write-Output "Audit policy set: $sub -- success,failure"
 }
 
 Write-Output ""
