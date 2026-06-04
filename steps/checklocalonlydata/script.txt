@@ -1,0 +1,30 @@
+# Desktop: verify no large local-only data exists outside OneDrive sync.
+$oneDriveRoot = (Get-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\OneDrive" -Name "UserFolder" -ErrorAction SilentlyContinue).UserFolder
+$userProfile  = $env:USERPROFILE
+$thresholdMb  = 100
+
+$profileDirs = Get-ChildItem -Path $userProfile -Directory -ErrorAction SilentlyContinue |
+    Where-Object { $_.Name -notin @("AppData", "Searches", "Links", "Contacts", "Saved Games", "SendTo") }
+
+$localOnlyDirs = @()
+
+foreach ($dir in $profileDirs) {
+    $isUnderOneDrive = $null -ne $oneDriveRoot -and $dir.FullName.StartsWith($oneDriveRoot)
+    if ($isUnderOneDrive) { continue }
+
+    $measureResult = Get-ChildItem -Path $dir.FullName -Recurse -File -ErrorAction SilentlyContinue |
+        Measure-Object -Property Length -Sum
+    $sizeBytes = if ($null -ne $measureResult.Sum) { $measureResult.Sum } else { 0 }
+    $sizeMb    = [math]::Round($sizeBytes / 1MB, 1)
+
+    if ($sizeMb -gt $thresholdMb) {
+        $localOnlyDirs += "$($dir.Name) (${sizeMb}MB)"
+    }
+}
+
+Write-Output "Local-only dirs above ${thresholdMb}MB : $($localOnlyDirs.Count)"
+$localOnlyDirs | ForEach-Object { Write-Output "  - $_" }
+
+$result = if ($localOnlyDirs.Count -eq 0) { "PASS" } else { "WARN -- large local-only data found" }
+Write-Output "CHECK Local-Only Data : $result"
+exit $(if ($localOnlyDirs.Count -eq 0) { 0 } else { 1 })

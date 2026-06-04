@@ -8,7 +8,7 @@
     "interpreterScriptSyntax": null, 
     "key": "disabletrustbarforunsignedmacros", 
     "name": "Disable Trust Bar for Unsigned Macros", 
-    "osCredKey": "windowscredential", 
+    "osCredKey": "windowscredentialsvcattune", 
     "serverKey": "windowsserver", 
     "successExitCode": 0, 
     "timeout": 60, 

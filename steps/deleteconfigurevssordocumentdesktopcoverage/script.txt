@@ -1,0 +1,70 @@
+$os       = Get-CimInstance -ClassName Win32_OperatingSystem
+$isServer = $os.Caption -match "Windows Server"
+
+if ($isServer) {
+    # wbadmin uses VSS automatically -- no manual VSS policy configuration is needed.
+    # This step confirms the VSS service is healthy and the schedule from Step 3 is present.
+    $vssSvc = Get-Service -Name VSS -ErrorAction SilentlyContinue
+    if ($null -eq $vssSvc) {
+        Write-Error "VSS service not found."
+        exit 1
+    }
+
+    if ($vssSvc.Status -ne "Running") {
+        Start-Service -Name VSS -ErrorAction SilentlyContinue
+    }
+    Set-Service -Name VSS -StartupType Automatic
+    Write-Output "VSS service   : $((Get-Service VSS).Status), startup Automatic (ISM-1810)"
+
+    # Confirm a wbadmin schedule exists by checking the WSB registry key.
+    # wbadmin get schedule is not a valid subcommand -- WSB stores schedule config
+    # under HKLM:\SYSTEM\CurrentControlSet\Services\wbengine\SystemStateBackup.
+    $wsbScheduleKey = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\SPP\Clients\{09F7EDC5-294E-4180-AF6A-FB0E6A0E9513}"
+    $wsbTaskPath    = "\Microsoft\Windows\WindowsBackup\AutomaticBackup"
+    $task = Get-ScheduledTask -TaskPath "\Microsoft\Windows\Backup\" -ErrorAction SilentlyContinue |
+            Where-Object { $_.TaskName -match "WindowsBackup" } |
+            Select-Object -First 1
+
+    if ($null -eq $task) {
+        Write-Output "WARN: No Windows Backup scheduled task found. Run Step 3 to configure it."
+        exit 1
+    }
+
+    Write-Output "Backup schedule task  : $($task.TaskName) ($($task.State))"
+    Write-Output "VSS and backup schedule verified."
+    exit 0
+}
+
+# Desktop: document the backup coverage statement for ISM-1511
+$oneDriveRoot = (Get-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\OneDrive" -Name "UserFolder" -ErrorAction SilentlyContinue).UserFolder
+$tenantName   = (Get-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\OneDrive\Accounts\Business1" -Name "DisplayName" -ErrorAction SilentlyContinue).DisplayName
+$userEmail    = (Get-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\OneDrive\Accounts\Business1" -Name "UserEmail" -ErrorAction SilentlyContinue).UserEmail
+
+Write-Output "======================================"
+Write-Output "  DESKTOP BACKUP COVERAGE STATEMENT"
+Write-Output "======================================"
+Write-Output "  Endpoint       : $env:COMPUTERNAME"
+Write-Output "  User           : $env:USERNAME"
+Write-Output "  OneDrive root  : $(if ($oneDriveRoot) { $oneDriveRoot } else { 'Not configured' })"
+Write-Output "  M365 tenant    : $(if ($tenantName) { $tenantName } else { 'Not detected' })"
+Write-Output "  Account        : $(if ($userEmail) { $userEmail } else { 'Not signed in' })"
+Write-Output ""
+Write-Output "  COVERED by OneDrive sync (ISM-1511 met):"
+Write-Output "    - Documents folder (if KFM configured)"
+Write-Output "    - Desktop folder   (if KFM configured)"
+Write-Output "    - Pictures folder  (if KFM configured)"
+Write-Output "    - Email via Exchange Online (retained per M365 policy)"
+Write-Output ""
+Write-Output "  NOT COVERED -- requires assessment:"
+Write-Output "    - Application data in %LOCALAPPDATA%"
+Write-Output "    - Browser profiles (credentials, bookmarks)"
+Write-Output "    - Custom application databases outside sync scope"
+Write-Output "    - OS configuration (recoverable via device re-image)"
+Write-Output ""
+Write-Output "  ISM-1810 (common point in time): Met -- OneDrive continuous"
+Write-Output "  sync with version history. No separate VSS required."
+Write-Output ""
+Write-Output "  ISM-1515 (restoration test): Document a recovery test where"
+Write-Output "  a fresh device signs in to OneDrive and confirms all KFM"
+Write-Output "  folders restore correctly. Record date and RTO achieved."
+Write-Output "======================================"

@@ -8,7 +8,7 @@
     "interpreterScriptSyntax": null, 
     "key": "checklastospatchdatevsml1timingthreshold", 
     "name": "Check Last OS Patch Date vs ML1 Timing Threshold", 
-    "osCredKey": "windowscredential", 
+    "osCredKey": "windowscredentialsvcattune", 
     "serverKey": "windowsserver", 
     "successExitCode": 0, 
     "timeout": 60, 

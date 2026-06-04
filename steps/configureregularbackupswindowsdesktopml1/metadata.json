@@ -1,0 +1,30 @@
+{
+    "actionOnStepFail": "stop", 
+    "concurrency": 1, 
+    "enabled": true, 
+    "externalUuid4": "51dd6fb3-fa39-4546-95f8-e89680b76bdb", 
+    "isBlueprint": true, 
+    "key": "configureregularbackupswindowsdesktopml1", 
+    "links": [
+        {
+            "stepKey": "detectwindowsdesktopos"
+        }, 
+        {
+            "stepKey": "verifyonedrivesyncclient"
+        }, 
+        {
+            "stepKey": "checkknownfoldermoveconfiguration"
+        }, 
+        {
+            "stepKey": "checksynccoverage"
+        }, 
+        {
+            "stepKey": "documentdesktopbackupcoverage"
+        }, 
+        {
+            "stepKey": "verifysyncstatus"
+        }
+    ], 
+    "name": "Configure Regular Backups Windows Desktop - ML1", 
+    "type": "com.servertribe.attune.tuples.StepGroupTuple"
+}

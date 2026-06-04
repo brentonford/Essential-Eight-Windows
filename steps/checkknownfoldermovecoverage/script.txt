@@ -1,0 +1,16 @@
+$kfmPath = "HKCU:\Software\Microsoft\OneDrive\Accounts"
+$kfmOk   = $false
+
+if (Test-Path $kfmPath) {
+    $accounts = Get-ChildItem $kfmPath -ErrorAction SilentlyContinue
+    foreach ($account in $accounts) {
+        $kfmDesktop   = (Get-ItemProperty $account.PSPath -Name "KFMFolderDesktop"   -ErrorAction SilentlyContinue).KFMFolderDesktop
+        $kfmDocuments = (Get-ItemProperty $account.PSPath -Name "KFMFolderDocuments" -ErrorAction SilentlyContinue).KFMFolderDocuments
+        if ($kfmDesktop -and $kfmDocuments) { $kfmOk = $true; break }
+    }
+}
+
+Write-Output "Known Folder Move (Desktop)   : $(if ($kfmOk) { 'Configured' } else { 'Not configured' })"
+Write-Output "Known Folder Move (Documents) : $(if ($kfmOk) { 'Configured' } else { 'Not configured' })"
+Write-Output "CHECK Known Folder Move : $(if ($kfmOk) { 'PASS' } else { 'FAIL -- KFM not configured' })"
+exit $(if ($kfmOk) { 0 } else { 1 })

@@ -8,7 +8,7 @@
     "interpreterScriptSyntax": null, 
     "key": "checkwdacprerequisitesandoscontext", 
     "name": "Check WDAC Prerequisites and OS Context", 
-    "osCredKey": "windowscredential", 
+    "osCredKey": "windowscredentialsvcattune", 
     "serverKey": "windowsserver", 
     "successExitCode": 0, 
     "timeout": 60, 

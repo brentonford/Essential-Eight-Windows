@@ -8,7 +8,7 @@
     "interpreterScriptSyntax": null, 
     "key": "checkoslifecyclestatus", 
     "name": "Check OS Lifecycle Status", 
-    "osCredKey": "windowscredential", 
+    "osCredKey": "windowscredentialsvcattune", 
     "serverKey": "windowsserver", 
     "successExitCode": 0, 
     "timeout": 60, 

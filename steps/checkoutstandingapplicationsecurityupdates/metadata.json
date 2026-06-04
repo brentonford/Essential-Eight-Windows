@@ -8,7 +8,7 @@
     "interpreterScriptSyntax": null, 
     "key": "checkoutstandingapplicationsecurityupdates", 
     "name": "Check Outstanding Application Security Updates", 
-    "osCredKey": "windowscredential", 
+    "osCredKey": "windowscredentialsvcattune", 
     "serverKey": "windowsserver", 
     "successExitCode": 0, 
     "timeout": 60, 

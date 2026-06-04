@@ -8,7 +8,7 @@
     "interpreterScriptSyntax": null, 
     "key": "blocknetworklogonforlocaladministrativeaccounts", 
     "name": "Block Network Logon for Local Administrative Accounts", 
-    "osCredKey": "windowscredential", 
+    "osCredKey": "windowscredentialsvcattune", 
     "serverKey": "windowsserver", 
     "successExitCode": 0, 
     "timeout": 60, 

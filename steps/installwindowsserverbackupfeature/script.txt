@@ -1,0 +1,25 @@
+$featureName = "Windows-Server-Backup"
+$feature     = Get-WindowsFeature -Name $featureName
+
+if ($feature.InstallState -eq "Installed") {
+    Write-Output "Windows Server Backup feature is already installed."
+    exit 0
+}
+
+Write-Output "Installing Windows Server Backup feature..."
+$result = Install-WindowsFeature -Name $featureName -IncludeManagementTools
+
+$feature = Get-WindowsFeature -Name $featureName
+if ($feature.InstallState -notin @("Installed", "InstallPending")) {
+    Write-Error "Windows Server Backup installation failed."
+    exit 1
+}
+
+if ($result.RestartNeeded -ne "No") {
+    Write-Output "Windows Server Backup installed successfully."
+    Write-Output "NOTE: A restart is required to complete the installation."
+    Write-Output "Restart the server and re-run the Blueprint to continue."
+    exit 0
+}
+
+Write-Output "Windows Server Backup installed successfully."

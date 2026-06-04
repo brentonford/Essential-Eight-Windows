@@ -1,0 +1,23 @@
+$vssSvc = Get-Service -Name VSS -ErrorAction SilentlyContinue
+if ($null -eq $vssSvc) {
+    Write-Error "VSS service not found."
+    exit 1
+}
+
+if ($vssSvc.Status -ne "Running") {
+    Start-Service -Name VSS -ErrorAction SilentlyContinue
+}
+Set-Service -Name VSS -StartupType Automatic
+Write-Output "VSS service   : $((Get-Service VSS).Status), startup Automatic (ISM-1810)"
+
+$task = Get-ScheduledTask -TaskPath "\Microsoft\Windows\Backup\" -ErrorAction SilentlyContinue |
+        Where-Object { $_.TaskName -match "WindowsBackup" } |
+        Select-Object -First 1
+
+if ($null -eq $task) {
+    Write-Output "WARN: No Windows Backup scheduled task found. Run Step 3 to configure it."
+    exit 1
+}
+
+Write-Output "Backup schedule task  : $($task.TaskName) ($($task.State))"
+Write-Output "VSS and backup schedule verified."

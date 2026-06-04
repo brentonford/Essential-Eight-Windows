@@ -1,0 +1,26 @@
+# Check Known Folder Move policy configuration.
+$kfmPolicyPath = "HKLM:\SOFTWARE\Policies\Microsoft\OneDrive"
+$existingKfm   = (Get-ItemProperty -Path $kfmPolicyPath -Name "KFMSilentOptIn" -ErrorAction SilentlyContinue).KFMSilentOptIn
+
+if ($null -ne $existingKfm) {
+    Write-Output "Known Folder Move policy configured (KFMSilentOptIn: $existingKfm)"
+} else {
+    Write-Output "NOTE: Known Folder Move policy not configured via HKLM."
+    Write-Output "Set HKLM:\SOFTWARE\Policies\Microsoft\OneDrive\KFMSilentOptIn = <TenantID>"
+    Write-Output "This ensures Documents, Desktop, and Pictures sync automatically."
+}
+
+$oneDriveRoot = (Get-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\OneDrive" -Name "UserFolder" -ErrorAction SilentlyContinue).UserFolder
+
+$kfmFolders = @{
+    "Documents" = [System.Environment]::GetFolderPath("MyDocuments")
+    "Desktop"   = [System.Environment]::GetFolderPath("Desktop")
+    "Pictures"  = [System.Environment]::GetFolderPath("MyPictures")
+}
+
+foreach ($folder in $kfmFolders.GetEnumerator()) {
+    $currentPath     = $folder.Value
+    $isUnderOneDrive = $null -ne $oneDriveRoot -and $currentPath.StartsWith($oneDriveRoot)
+    Write-Output "$($folder.Key) path   : $currentPath"
+    Write-Output "$($folder.Key) synced : $isUnderOneDrive"
+}

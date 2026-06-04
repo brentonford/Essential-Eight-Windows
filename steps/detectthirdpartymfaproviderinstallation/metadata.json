@@ -8,7 +8,7 @@
     "interpreterScriptSyntax": null, 
     "key": "detectthirdpartymfaproviderinstallation", 
     "name": "Detect Third-Party MFA Provider Installation", 
-    "osCredKey": "windowscredential", 
+    "osCredKey": "windowscredentialsvcattune", 
     "serverKey": "windowsserver", 
     "successExitCode": 0, 
     "timeout": 60, 

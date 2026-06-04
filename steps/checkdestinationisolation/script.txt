@@ -1,0 +1,21 @@
+$destinationPath = "{backupDestinationPath}".Trim()
+
+if ([string]::IsNullOrWhiteSpace($destinationPath)) {
+    Write-Output "CHECK Destination Isolation : WARN -- no backup destination path parameter provided"
+    exit 1
+}
+
+Write-Output "Backup destination path : $destinationPath"
+
+$destIsUNC   = $destinationPath -match '^(\\\\|//)'
+$systemDrive = $env:SystemDrive.TrimEnd("\")
+$destDrive   = try { (Split-Path $destinationPath -Qualifier).TrimEnd("\") } catch { $null }
+$isIsolated  = $destIsUNC -or ($null -ne $destDrive -and $destDrive -ne $systemDrive)
+
+Write-Output "Type            : $(if ($destIsUNC) { 'UNC network share' } else { 'Local volume' })"
+Write-Output "System drive    : $systemDrive"
+Write-Output "Destination drv : $(if ($destDrive) { $destDrive } else { 'N/A (UNC)' })"
+Write-Output "Drive isolated  : $isIsolated"
+
+Write-Output "CHECK Destination Isolation : $(if ($isIsolated) { 'PASS' } else { 'FAIL -- backup on system drive' })"
+exit $(if ($isIsolated) { 0 } else { 1 })

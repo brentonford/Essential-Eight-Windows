@@ -26,7 +26,7 @@
             "childProjectName": null, 
             "childProjectUuid": "fd5a817e-7472-4116-a915-173c9a4df5fb", 
             "childProjectVersion": "master", 
-            "parentParameterKey": "windowscredential", 
+            "parentParameterKey": "windowscredentialsvcattune", 
             "parentStaticTextValue": null
         }
     ], 

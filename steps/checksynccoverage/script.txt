@@ -1,0 +1,43 @@
+# Check which user profile locations are NOT covered by OneDrive sync.
+Write-Output "Checking for local-only data in user profile..."
+
+$oneDriveRoot = (Get-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\OneDrive" -Name "UserFolder" -ErrorAction SilentlyContinue).UserFolder
+$userProfile  = $env:USERPROFILE
+$thresholdMb  = 100
+
+$profileDirs = Get-ChildItem -Path $userProfile -Directory -ErrorAction SilentlyContinue |
+    Where-Object { $_.Name -notin @("AppData", "Searches", "Links", "Contacts", "Saved Games", "SendTo") }
+
+$localOnlyDirs = @()
+
+foreach ($dir in $profileDirs) {
+    $isUnderOneDrive = $null -ne $oneDriveRoot -and $dir.FullName.StartsWith($oneDriveRoot)
+
+    if ($isUnderOneDrive) {
+        Write-Output "SYNCED    : $($dir.FullName)"
+        continue
+    }
+
+    $measureResult = Get-ChildItem -Path $dir.FullName -Recurse -File -ErrorAction SilentlyContinue |
+        Measure-Object -Property Length -Sum
+    $sizeBytes = if ($null -ne $measureResult.Sum) { $measureResult.Sum } else { 0 }
+    $sizeMb    = [math]::Round($sizeBytes / 1MB, 1)
+
+    if ($sizeMb -gt $thresholdMb) {
+        Write-Output "LOCAL ONLY: $($dir.FullName) -- ${sizeMb}MB (above ${thresholdMb}MB threshold)"
+        $localOnlyDirs += "$($dir.Name) (${sizeMb}MB)"
+    } else {
+        Write-Output "local only: $($dir.FullName) -- ${sizeMb}MB (below threshold, acceptable)"
+    }
+}
+
+if ($localOnlyDirs.Count -gt 0) {
+    Write-Output ""
+    Write-Output "WARN: $($localOnlyDirs.Count) large local-only director(y/ies) found."
+    Write-Output "Move these to OneDrive or a mapped network share to meet ISM-1511."
+    $localOnlyDirs | ForEach-Object { Write-Output "  - $_" }
+    exit 1
+}
+
+Write-Output ""
+Write-Output "No large local-only directories found above ${thresholdMb}MB threshold."

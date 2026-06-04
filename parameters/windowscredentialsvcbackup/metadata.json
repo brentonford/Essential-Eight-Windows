@@ -1,0 +1,7 @@
+{
+    "externalUuid4": "6c3f69d7-d652-43d1-8c34-0949e726a287", 
+    "key": "windowscredentialsvcbackup", 
+    "name": "Windows Credential - svc-backup", 
+    "showInPlan": true, 
+    "type": "c.s.s.b.phv.WinOsCred"
+}

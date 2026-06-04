@@ -8,7 +8,7 @@
     "interpreterScriptSyntax": null, 
     "key": "applyedgesecuritypolicysettings", 
     "name": "Apply Edge Security Policy Settings", 
-    "osCredKey": "windowscredential", 
+    "osCredKey": "windowscredentialsvcattune", 
     "serverKey": "windowsserver", 
     "successExitCode": 0, 
     "timeout": 60, 

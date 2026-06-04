@@ -8,7 +8,7 @@
     "interpreterScriptSyntax": null, 
     "key": "addml1userwritablepathdenyrules", 
     "name": "Add ML1 User-Writable Path Deny Rules", 
-    "osCredKey": "windowscredential", 
+    "osCredKey": "windowscredentialsvcattune", 
     "serverKey": "windowsserver", 
     "successExitCode": 0, 
     "timeout": 60, 

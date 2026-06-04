@@ -1,0 +1,16 @@
+{
+    "actionOnStepFail": "continue", 
+    "enabled": true, 
+    "externalUuid4": "ae39bb6c-50fc-4b93-8b8f-be0e843141b2", 
+    "interpreter": 2, 
+    "interpreterCommand": null, 
+    "interpreterScriptExt": null, 
+    "interpreterScriptSyntax": null, 
+    "key": "outputml1windowsdesktopbackupscompliancereport", 
+    "name": "Output ML1 Windows Desktop Backups Compliance Report", 
+    "osCredKey": "windowscredentialsvcattune", 
+    "serverKey": "windowsserver", 
+    "successExitCode": 0, 
+    "timeout": 60, 
+    "type": "com.servertribe.attune.tuples.StepWinRmTuple"
+}

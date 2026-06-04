@@ -8,7 +8,7 @@
     "interpreterScriptSyntax": null, 
     "key": "detectandremoveeolapplications", 
     "name": "Detect and Remove EOL Applications", 
-    "osCredKey": "windowscredential", 
+    "osCredKey": "windowscredentialsvcattune", 
     "serverKey": "windowsserver", 
     "successExitCode": 0, 
     "timeout": 60, 

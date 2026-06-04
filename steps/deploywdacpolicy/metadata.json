@@ -8,7 +8,7 @@
     "interpreterScriptSyntax": null, 
     "key": "deploywdacpolicy", 
     "name": "Deploy WDAC Policy", 
-    "osCredKey": "windowscredential", 
+    "osCredKey": "windowscredentialsvcattune", 
     "serverKey": "windowsserver", 
     "successExitCode": 0, 
     "timeout": 60, 

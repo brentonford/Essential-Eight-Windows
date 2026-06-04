@@ -8,7 +8,7 @@
     "interpreterScriptSyntax": null, 
     "key": "checkbuiltinadministratoraccountstatus", 
     "name": "Check Built-In Administrator Account Status", 
-    "osCredKey": "windowscredential", 
+    "osCredKey": "windowscredentialsvcattune", 
     "serverKey": "windowsserver", 
     "successExitCode": 0, 
     "timeout": 60, 

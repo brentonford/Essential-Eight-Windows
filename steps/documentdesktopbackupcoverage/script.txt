@@ -1,0 +1,30 @@
+# Document the desktop backup coverage statement for ISM-1511.
+$oneDriveRoot = (Get-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\OneDrive" -Name "UserFolder" -ErrorAction SilentlyContinue).UserFolder
+$tenantName   = (Get-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\OneDrive\Accounts\Business1" -Name "DisplayName" -ErrorAction SilentlyContinue).DisplayName
+$userEmail    = (Get-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\OneDrive\Accounts\Business1" -Name "UserEmail" -ErrorAction SilentlyContinue).UserEmail
+
+Write-Output "======================================"
+Write-Output "  DESKTOP BACKUP COVERAGE STATEMENT"
+Write-Output "======================================"
+Write-Output "  Endpoint       : $env:COMPUTERNAME"
+Write-Output "  User           : $env:USERNAME"
+Write-Output "  OneDrive root  : $(if ($oneDriveRoot) { $oneDriveRoot } else { 'Not configured' })"
+Write-Output "  M365 tenant    : $(if ($tenantName) { $tenantName } else { 'Not detected' })"
+Write-Output "  Account        : $(if ($userEmail) { $userEmail } else { 'Not signed in' })"
+Write-Output ""
+Write-Output "  COVERED by OneDrive sync (ISM-1511 met):"
+Write-Output "    - Documents folder (if KFM configured)"
+Write-Output "    - Desktop folder   (if KFM configured)"
+Write-Output "    - Pictures folder  (if KFM configured)"
+Write-Output "    - Email via Exchange Online (retained per M365 policy)"
+Write-Output ""
+Write-Output "  NOT COVERED -- requires assessment:"
+Write-Output "    - Application data in %LOCALAPPDATA%"
+Write-Output "    - Browser profiles (credentials, bookmarks)"
+Write-Output "    - Custom application databases outside sync scope"
+Write-Output "    - OS configuration (recoverable via device re-image)"
+Write-Output ""
+Write-Output "  ISM-1810: Met -- OneDrive continuous sync with version history."
+Write-Output "  ISM-1515: Document a recovery test where a fresh device signs in"
+Write-Output "  to OneDrive and confirms all KFM folders restore correctly."
+Write-Output "======================================"

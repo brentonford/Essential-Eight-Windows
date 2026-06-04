@@ -8,7 +8,7 @@
     "interpreterScriptSyntax": null, 
     "key": "enumerateprivilegedaccountsandflaganomalies", 
     "name": "Enumerate Privileged Accounts and Flag Anomalies", 
-    "osCredKey": "windowscredential", 
+    "osCredKey": "windowscredentialsvcattune", 
     "serverKey": "windowsserver", 
     "successExitCode": 0, 
     "timeout": 60, 

@@ -8,7 +8,7 @@
     "interpreterScriptSyntax": null, 
     "key": "checkwingetavailability", 
     "name": "Check winget Availability", 
-    "osCredKey": "windowscredential", 
+    "osCredKey": "windowscredentialsvcattune", 
     "serverKey": "windowsserver", 
     "successExitCode": 0, 
     "timeout": 60, 

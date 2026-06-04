@@ -1,0 +1,33 @@
+$destinationPath    = "{backupDestinationPath}".Trim()
+$backupCredUser     = "{windowsCredentialSvcBackup.user}".Trim()
+$backupCredPassword = "{windowsCredentialSvcBackup.password}".Trim()
+
+if ([string]::IsNullOrWhiteSpace($destinationPath)) {
+    $destinationPath = if (Test-Path "D:\") { "D:\WindowsServerBackup" } else { "C:\WindowsServerBackup" }
+}
+
+Write-Output "Starting initial backup job..."
+Write-Output "Timestamp: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
+Write-Output "This may take several minutes depending on data volume."
+Write-Output ""
+
+$isUNC  = $destinationPath -match '^(\\\\|//)'
+$wbArgs = "start backup -allcritical -systemstate -vssFull -backupTarget:$destinationPath -quiet"
+
+if ($isUNC -and -not [string]::IsNullOrWhiteSpace($backupCredUser)) {
+    $wbArgs += " -user:$backupCredUser -password:$backupCredPassword"
+}
+
+Write-Output "Running: wbadmin $($wbArgs -replace [regex]::Escape($backupCredPassword), '****')"
+Write-Output ""
+
+$wbResult = cmd /c "wbadmin $wbArgs" 2>&1
+$wbResult | ForEach-Object { Write-Output $_ }
+
+if ($LASTEXITCODE -ne 0) {
+    Write-Error "Initial backup failed (exit code $LASTEXITCODE)."
+    exit 1
+}
+
+Write-Output ""
+Write-Output "Initial backup complete. Configuration verified functional."

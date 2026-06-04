@@ -8,7 +8,7 @@
     "interpreterScriptSyntax": null, 
     "key": "checkjavabrowserpluginstatus", 
     "name": "Check Java Browser Plugin Status", 
-    "osCredKey": "windowscredential", 
+    "osCredKey": "windowscredentialsvcattune", 
     "serverKey": "windowsserver", 
     "successExitCode": 0, 
     "timeout": 60, 

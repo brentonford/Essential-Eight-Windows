@@ -8,7 +8,7 @@
     "interpreterScriptSyntax": null, 
     "key": "configureaccountlockoutpolicy", 
     "name": "Configure Account Lockout Policy", 
-    "osCredKey": "windowscredential", 
+    "osCredKey": "windowscredentialsvcattune", 
     "serverKey": "windowsserver", 
     "successExitCode": 0, 
     "timeout": 60, 

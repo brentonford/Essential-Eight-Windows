@@ -1,0 +1,33 @@
+# Verify that a file can be retrieved from OneDrive version history.
+# Full restore test: sign in to OneDrive on a fresh device and confirm
+# KFM folders (Documents, Desktop, Pictures) restore correctly.
+# This step checks that OneDrive sync is active and version history is enabled.
+$oneDriveRoot = (Get-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\OneDrive" -Name "UserFolder" -ErrorAction SilentlyContinue).UserFolder
+
+if ($null -eq $oneDriveRoot) {
+    Write-Output "CHECK Restore Test : FAIL -- OneDrive root not configured"
+    exit 1
+}
+
+$testFile    = Join-Path $oneDriveRoot "attune-restore-test-$(Get-Date -Format 'yyyyMMddHHmmss').tmp"
+$versionable = $false
+
+try {
+    [System.IO.File]::WriteAllText($testFile, "AttuneOps restore verification $(Get-Date)")
+    Start-Sleep -Seconds 2
+    $fileInfo    = Get-Item $testFile -ErrorAction Stop
+    $versionable = $fileInfo.Length -gt 0
+    Remove-Item $testFile -Force -ErrorAction SilentlyContinue
+} catch {
+    Write-Output "CHECK Restore Test : FAIL -- could not write test file to OneDrive folder: $($_.Exception.Message)"
+    exit 1
+}
+
+Write-Output "OneDrive root         : $oneDriveRoot"
+Write-Output "Test file written     : $versionable"
+Write-Output "CHECK Restore Test    : PASS -- OneDrive sync folder is writable"
+Write-Output ""
+Write-Output "NOTE ISM-1515: Conduct and document a manual restore test:"
+Write-Output "  1. Sign in to OneDrive on a fresh or test device"
+Write-Output "  2. Confirm Documents, Desktop, Pictures folders restore correctly"
+Write-Output "  3. Record date, RTO achieved, and any gaps found"

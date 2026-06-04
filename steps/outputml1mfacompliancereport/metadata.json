@@ -8,7 +8,7 @@
     "interpreterScriptSyntax": null, 
     "key": "outputml1mfacompliancereport", 
     "name": "Output ML1 MFA Compliance Report", 
-    "osCredKey": "windowscredential", 
+    "osCredKey": "windowscredentialsvcattune", 
     "serverKey": "windowsserver", 
     "successExitCode": 0, 
     "timeout": 60, 

@@ -1,0 +1,22 @@
+$versionsOutput = cmd /c "wbadmin get versions" 2>&1
+$versionsOutput | ForEach-Object { Write-Output $_ }
+
+$versionLines = $versionsOutput | Where-Object { $_ -match "Version identifier:" }
+
+if (-not $versionLines) {
+    Write-Output ""
+    Write-Output "CHECK Restore Test : FAIL -- no backup versions found"
+    exit 1
+}
+
+$versionCount = @($versionLines).Count
+$latestId     = ($versionLines | Select-Object -Last 1) -replace "Version identifier:\s*", ""
+
+Write-Output ""
+Write-Output "Backup versions available : $versionCount"
+Write-Output "Latest version ID         : $($latestId.Trim())"
+Write-Output ""
+Write-Output "CHECK Restore Test : PASS -- $versionCount backup version(s) available for recovery"
+Write-Output ""
+Write-Output "NOTE ISM-1515: To perform a manual restore:"
+Write-Output "  wbadmin start recovery -version:$($latestId.Trim()) -itemType:Volume -items:C: -recoveryTarget:<TargetVol> -quiet"

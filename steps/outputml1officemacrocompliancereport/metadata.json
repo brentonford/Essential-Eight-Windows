@@ -8,7 +8,7 @@
     "interpreterScriptSyntax": null, 
     "key": "outputml1officemacrocompliancereport", 
     "name": "Output ML1 Office Macro Compliance Report", 
-    "osCredKey": "windowscredential", 
+    "osCredKey": "windowscredentialsvcattune", 
     "serverKey": "windowsserver", 
     "successExitCode": 0, 
     "timeout": 60, 

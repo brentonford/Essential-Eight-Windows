@@ -8,7 +8,7 @@
     "interpreterScriptSyntax": null, 
     "key": "buildallowallbasepolicy", 
     "name": "Build AllowAll Base Policy", 
-    "osCredKey": "windowscredential", 
+    "osCredKey": "windowscredentialsvcattune", 
     "serverKey": "windowsserver", 
     "successExitCode": 0, 
     "timeout": 60, 

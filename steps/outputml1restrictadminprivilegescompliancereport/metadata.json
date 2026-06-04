@@ -8,7 +8,7 @@
     "interpreterScriptSyntax": null, 
     "key": "outputml1restrictadminprivilegescompliancereport", 
     "name": "Output ML1 Restrict Admin Privileges Compliance Report", 
-    "osCredKey": "windowscredential", 
+    "osCredKey": "windowscredentialsvcattune", 
     "serverKey": "windowsserver", 
     "successExitCode": 0, 
     "timeout": 60, 

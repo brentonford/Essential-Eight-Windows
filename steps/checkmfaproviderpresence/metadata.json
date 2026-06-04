@@ -8,7 +8,7 @@
     "interpreterScriptSyntax": null, 
     "key": "checkmfaproviderpresence", 
     "name": "Check MFA Provider Presence", 
-    "osCredKey": "windowscredential", 
+    "osCredKey": "windowscredentialsvcattune", 
     "serverKey": "windowsserver", 
     "successExitCode": 0, 
     "timeout": 60, 

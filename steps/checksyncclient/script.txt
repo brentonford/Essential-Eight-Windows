@@ -1,0 +1,18 @@
+$oneDriveExe = @(
+    "$env:LOCALAPPDATA\Microsoft\OneDrive\OneDrive.exe",
+    "$env:ProgramFiles\Microsoft OneDrive\OneDrive.exe",
+    "${env:ProgramFiles(x86)}\Microsoft OneDrive\OneDrive.exe"
+) | Where-Object { Test-Path $_ } | Select-Object -First 1
+
+$odRunning = $null -ne (Get-Process -Name OneDrive -ErrorAction SilentlyContinue)
+
+Write-Output "OneDrive client present : $(if ($oneDriveExe) { 'Yes' } else { 'No' })"
+Write-Output "OneDrive process running: $odRunning"
+
+if ($oneDriveExe -and $odRunning) {
+    Write-Output "CHECK Sync Client : PASS"
+    exit 0
+}
+
+Write-Output "CHECK Sync Client : FAIL -- OneDrive not present or not running"
+exit 1

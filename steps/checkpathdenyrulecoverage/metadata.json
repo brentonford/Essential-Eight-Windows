@@ -8,7 +8,7 @@
     "interpreterScriptSyntax": null, 
     "key": "checkpathdenyrulecoverage", 
     "name": "Check Path Deny Rule Coverage", 
-    "osCredKey": "windowscredential", 
+    "osCredKey": "windowscredentialsvcattune", 
     "serverKey": "windowsserver", 
     "successExitCode": 0, 
     "timeout": 60, 

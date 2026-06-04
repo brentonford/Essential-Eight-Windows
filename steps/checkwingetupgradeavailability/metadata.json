@@ -8,7 +8,7 @@
     "interpreterScriptSyntax": null, 
     "key": "checkwingetupgradeavailability", 
     "name": "Check winget Upgrade Availability", 
-    "osCredKey": "windowscredential", 
+    "osCredKey": "windowscredentialsvcattune", 
     "serverKey": "windowsserver", 
     "successExitCode": 0, 
     "timeout": 60, 

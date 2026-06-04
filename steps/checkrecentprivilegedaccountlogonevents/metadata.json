@@ -8,7 +8,7 @@
     "interpreterScriptSyntax": null, 
     "key": "checkrecentprivilegedaccountlogonevents", 
     "name": "Check Recent Privileged Account Logon Events", 
-    "osCredKey": "windowscredential", 
+    "osCredKey": "windowscredentialsvcattune", 
     "serverKey": "windowsserver", 
     "successExitCode": 0, 
     "timeout": 60, 

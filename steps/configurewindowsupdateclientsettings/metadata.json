@@ -8,7 +8,7 @@
     "interpreterScriptSyntax": null, 
     "key": "configurewindowsupdateclientsettings", 
     "name": "Configure Windows Update Client Settings", 
-    "osCredKey": "windowscredential", 
+    "osCredKey": "windowscredentialsvcattune", 
     "serverKey": "windowsserver", 
     "successExitCode": 0, 
     "timeout": 60, 

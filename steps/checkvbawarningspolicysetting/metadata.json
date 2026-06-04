@@ -8,7 +8,7 @@
     "interpreterScriptSyntax": null, 
     "key": "checkvbawarningspolicysetting", 
     "name": "Check VBAWarnings Policy Setting", 
-    "osCredKey": "windowscredential", 
+    "osCredKey": "windowscredentialsvcattune", 
     "serverKey": "windowsserver", 
     "successExitCode": 0, 
     "timeout": 60, 

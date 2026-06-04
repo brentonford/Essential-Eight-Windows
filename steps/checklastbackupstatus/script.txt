@@ -1,0 +1,23 @@
+$versionsOutput = cmd /c "wbadmin get versions" 2>&1
+$versionsOutput | ForEach-Object { Write-Output $_ }
+
+$lastBackupLine = $versionsOutput | Where-Object { $_ -match "Backup time:" } | Select-Object -Last 1
+$lastSuccess    = $null
+$ageHours       = $null
+
+if ($lastBackupLine) {
+    try {
+        $dateStr     = ($lastBackupLine -replace "Backup time:\s*", "").Trim()
+        $lastSuccess = [datetime]::Parse($dateStr)
+        $ageHours    = [math]::Round((New-TimeSpan -Start $lastSuccess -End (Get-Date)).TotalHours, 1)
+    } catch { }
+}
+
+Write-Output ""
+Write-Output "Last backup time  : $(if ($lastSuccess) { $lastSuccess.ToString('yyyy-MM-dd HH:mm:ss') } else { 'No backups found' })"
+Write-Output "Backup age (hours): $(if ($null -ne $ageHours) { $ageHours } else { 'N/A' })"
+
+$ageOk = $null -ne $ageHours -and $ageHours -le 24
+
+Write-Output "CHECK Backup Status : $(if ($ageOk) { 'PASS' } else { 'FAIL -- last backup older than 24 hours or never run' })"
+exit $(if ($ageOk) { 0 } else { 1 })

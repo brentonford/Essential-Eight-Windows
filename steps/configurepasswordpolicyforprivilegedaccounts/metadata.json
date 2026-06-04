@@ -8,7 +8,7 @@
     "interpreterScriptSyntax": null, 
     "key": "configurepasswordpolicyforprivilegedaccounts", 
     "name": "Configure Password Policy for Privileged Accounts", 
-    "osCredKey": "windowscredential", 
+    "osCredKey": "windowscredentialsvcattune", 
     "serverKey": "windowsserver", 
     "successExitCode": 0, 
     "timeout": 60, 

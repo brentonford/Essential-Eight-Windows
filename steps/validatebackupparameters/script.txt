@@ -1,0 +1,10 @@
+$retentionDays = [int]("{backupRetentionDays}".Trim())
+if ($retentionDays -lt 30) {
+    Write-Output "WARN: Retention $retentionDays days -- ML1 best practice is >= 30 days."
+    exit 1
+}
+
+Write-Output "Backup parameters validated."
+Write-Output "  Retention : $retentionDays days"
+Write-Output "  Schedule  : daily 02:00 (configured in Step 3 via wbadmin)"
+Write-Output "  Scope     : -allcritical -systemstate (configured in Step 3)"

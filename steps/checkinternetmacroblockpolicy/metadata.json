@@ -8,7 +8,7 @@
     "interpreterScriptSyntax": null, 
     "key": "checkinternetmacroblockpolicy", 
     "name": "Check Internet Macro Block Policy", 
-    "osCredKey": "windowscredential", 
+    "osCredKey": "windowscredentialsvcattune", 
     "serverKey": "windowsserver", 
     "successExitCode": 0, 
     "timeout": 60, 

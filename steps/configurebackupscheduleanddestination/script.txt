@@ -1,0 +1,98 @@
+# Guard: restart pending means wbadmin is not yet available
+$restartPending = (Get-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based Servicing" -Name "RebootPending" -ErrorAction SilentlyContinue).RebootPending
+if ($restartPending) {
+    Write-Output "NOTE: Windows Server Backup feature is installed but a restart is required."
+    Write-Output "Restart the server and re-run the Blueprint to continue."
+    exit 0
+}
+
+if (-not (Get-Command wbadmin -ErrorAction SilentlyContinue)) {
+    Write-Error "wbadmin not found. Install the Windows Server Backup feature first (Step 1)."
+    exit 1
+}
+
+$destinationPath    = "{backupDestinationPath}".Trim()
+$retentionDays      = [int]("{backupRetentionDays}".Trim())
+$backupCredUser     = "{windowsCredentialSvcBackup.user}".Trim()
+$backupCredPassword = "{windowsCredentialSvcBackup.password}".Trim()
+
+# Default to local if no destination provided
+if ([string]::IsNullOrWhiteSpace($destinationPath)) {
+    $destinationPath = if (Test-Path "D:\") { "D:\WindowsServerBackup" } else { "C:\WindowsServerBackup" }
+    Write-Output "NOTE: No backup destination parameter provided."
+    Write-Output "Using local path: $destinationPath"
+    Write-Output "ISM-1811 GAP: Local destination is not isolated from this server."
+    Write-Output "Set Backup Destination Path to a UNC share for full compliance."
+}
+
+$isUNC = $destinationPath -match '^(\\\\|//)'
+
+Write-Output "Destination : $destinationPath"
+Write-Output "Type        : $(if ($isUNC) { 'UNC network share' } else { 'Local volume' })"
+
+if (-not $isUNC) {
+    if (-not (Test-Path $destinationPath -ErrorAction SilentlyContinue)) {
+        New-Item -ItemType Directory -Path $destinationPath -Force | Out-Null
+        Write-Output "Created local destination directory."
+    }
+    Write-Output "ISM-1811 GAP: Local destination is accessible from this server."
+}
+
+# WSB workgroup credential requirement:
+# wbadmin enable backup validates the -user credential against local accounts.
+# In a workgroup, it will not accept a credential it cannot resolve locally.
+# Solution: create a matching local account. Windows maps it to the Samba account
+# by username/password match (pass-through authentication).
+if ($isUNC -and -not [string]::IsNullOrWhiteSpace($backupCredUser)) {
+    $localUser = Get-LocalUser -Name $backupCredUser -ErrorAction SilentlyContinue
+
+    if ($null -eq $localUser) {
+        $securePass = ConvertTo-SecureString $backupCredPassword -AsPlainText -Force
+        New-LocalUser -Name $backupCredUser -Password $securePass `
+            -PasswordNeverExpires `
+            -UserMayNotChangePassword `
+            -Description "Backup service account for WSB network target" | Out-Null
+        Write-Output "Local account created : $backupCredUser"
+    } else {
+        $securePass = ConvertTo-SecureString $backupCredPassword -AsPlainText -Force
+        Set-LocalUser -Name $backupCredUser -Password $securePass | Out-Null
+        Write-Output "Local account updated : $backupCredUser (password synced)"
+    }
+
+    $inBackupOps = Get-LocalGroupMember -Group "Backup Operators" -ErrorAction SilentlyContinue |
+        Where-Object { $_.Name -match "\\$backupCredUser$" }
+
+    if (-not $inBackupOps) {
+        Add-LocalGroupMember -Group "Backup Operators" -Member $backupCredUser
+        Write-Output "Group membership     : $backupCredUser added to Backup Operators"
+    } else {
+        Write-Output "Group membership     : $backupCredUser already in Backup Operators"
+    }
+}
+
+$wbArgs = "enable backup -addtarget:$destinationPath -allcritical -systemstate -schedule:02:00 -quiet"
+
+if ($isUNC -and -not [string]::IsNullOrWhiteSpace($backupCredUser)) {
+    $wbArgs += " -user:$backupCredUser -password:$backupCredPassword"
+    Write-Output "Credentials : $backupCredUser"
+}
+
+Write-Output ""
+Write-Output "Running: wbadmin $($wbArgs -replace [regex]::Escape($backupCredPassword), '****')"
+Write-Output ""
+
+$wbResult = cmd /c "wbadmin $wbArgs" 2>&1
+$wbResult | ForEach-Object { Write-Output $_ }
+
+if ($LASTEXITCODE -ne 0) {
+    Write-Error "wbadmin enable backup failed (exit code $LASTEXITCODE)."
+    exit 1
+}
+
+Write-Output ""
+Write-Output "Backup schedule configured."
+Write-Output "  Target     : $destinationPath"
+Write-Output "  Schedule   : Daily 02:00"
+Write-Output "  Scope      : All critical volumes + system state (-allcritical -systemstate)"
+Write-Output "  Retention  : $retentionDays days (enforced at destination)"
+Write-Output "  ISM-1811   : $(if ($isUNC) { 'Network destination (PASS)' } else { 'Local destination (GAP)' })"

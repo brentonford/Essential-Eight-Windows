@@ -8,7 +8,7 @@
     "interpreterScriptSyntax": null, 
     "key": "enablenetworklevelauthenticationforrdp", 
     "name": "Enable Network Level Authentication for RDP", 
-    "osCredKey": "windowscredential", 
+    "osCredKey": "windowscredentialsvcattune", 
     "serverKey": "windowsserver", 
     "successExitCode": 0, 
     "timeout": 60, 

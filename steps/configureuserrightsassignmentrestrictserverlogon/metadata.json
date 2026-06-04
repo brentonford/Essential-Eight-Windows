@@ -8,7 +8,7 @@
     "interpreterScriptSyntax": null, 
     "key": "configureuserrightsassignmentrestrictserverlogon", 
     "name": "Configure User Rights Assignment \u2014 Restrict Server Logon", 
-    "osCredKey": "windowscredential", 
+    "osCredKey": "windowscredentialsvcattune", 
     "serverKey": "windowsserver", 
     "successExitCode": 0, 
     "timeout": 60, 

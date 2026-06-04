@@ -1,0 +1,7 @@
+{
+    "externalUuid4": "17a025ae-bcac-4777-8e07-cb0ffe254de7", 
+    "key": "windowscredentialsvcattune", 
+    "name": "Windows Credential - svc-attune", 
+    "showInPlan": true, 
+    "type": "c.s.s.b.phv.WinOsCred"
+}

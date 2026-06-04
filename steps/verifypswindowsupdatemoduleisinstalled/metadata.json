@@ -8,7 +8,7 @@
     "interpreterScriptSyntax": null, 
     "key": "verifypswindowsupdatemoduleisinstalled", 
     "name": "Verify PSWindowsUpdate Module is Installed", 
-    "osCredKey": "windowscredential", 
+    "osCredKey": "windowscredentialsvcattune", 
     "serverKey": "windowsserver", 
     "successExitCode": 0, 
     "timeout": 60, 

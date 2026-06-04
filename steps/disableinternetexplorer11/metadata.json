@@ -8,7 +8,7 @@
     "interpreterScriptSyntax": null, 
     "key": "disableinternetexplorer11", 
     "name": "Disable Internet Explorer 11", 
-    "osCredKey": "windowscredential", 
+    "osCredKey": "windowscredentialsvcattune", 
     "serverKey": "windowsserver", 
     "successExitCode": 0, 
     "timeout": 60, 

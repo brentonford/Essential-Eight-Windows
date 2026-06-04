@@ -8,7 +8,7 @@
     "interpreterScriptSyntax": null, 
     "key": "outputml1applicationcontrolcompliancereport", 
     "name": "Output ML1 Application Control Compliance Report", 
-    "osCredKey": "windowscredential", 
+    "osCredKey": "windowscredentialsvcattune", 
     "serverKey": "windowsserver", 
     "successExitCode": 0, 
     "timeout": 60, 

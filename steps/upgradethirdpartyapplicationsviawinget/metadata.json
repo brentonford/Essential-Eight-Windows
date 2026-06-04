@@ -8,7 +8,7 @@
     "interpreterScriptSyntax": null, 
     "key": "upgradethirdpartyapplicationsviawinget", 
     "name": "Upgrade Third-Party Applications via winget", 
-    "osCredKey": "windowscredential", 
+    "osCredKey": "windowscredentialsvcattune", 
     "serverKey": "windowsserver", 
     "successExitCode": 0, 
     "timeout": 60, 

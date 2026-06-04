@@ -8,7 +8,7 @@
     "interpreterScriptSyntax": null, 
     "key": "checknetworklevelauthenticationstatus", 
     "name": "Check Network Level Authentication Status", 
-    "osCredKey": "windowscredential", 
+    "osCredKey": "windowscredentialsvcattune", 
     "serverKey": "windowsserver", 
     "successExitCode": 0, 
     "timeout": 60, 

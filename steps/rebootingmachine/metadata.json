@@ -8,7 +8,7 @@
     "interpreterScriptSyntax": null, 
     "key": "rebootingmachine", 
     "name": "Rebooting Machine", 
-    "osCredKey": "windowscredential", 
+    "osCredKey": "windowscredentialsvcattune", 
     "serverKey": "windowsserver", 
     "successExitCode": 0, 
     "timeout": 60, 

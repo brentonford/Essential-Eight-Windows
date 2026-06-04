@@ -8,7 +8,7 @@
     "interpreterScriptSyntax": null, 
     "key": "readlastapplicationupdatehistory", 
     "name": "Read Last Application Update History", 
-    "osCredKey": "windowscredential", 
+    "osCredKey": "windowscredentialsvcattune", 
     "serverKey": "windowsserver", 
     "successExitCode": 0, 
     "timeout": 60, 

@@ -1,0 +1,26 @@
+# Verify OneDrive sync client is installed and running.
+$oneDrivePaths = @(
+    "$env:LOCALAPPDATA\Microsoft\OneDrive\OneDrive.exe",
+    "$env:ProgramFiles\Microsoft OneDrive\OneDrive.exe",
+    "${env:ProgramFiles(x86)}\Microsoft OneDrive\OneDrive.exe"
+)
+
+$oneDriveExe = $oneDrivePaths | Where-Object { Test-Path $_ } | Select-Object -First 1
+
+if ($null -eq $oneDriveExe) {
+    Write-Output "WARN: OneDrive client not found on this desktop."
+    Write-Output "Install OneDrive and configure Known Folder Move to meet ISM-1511."
+    exit 1
+}
+
+Write-Output "OneDrive client found: $oneDriveExe"
+
+$oneDriveProcess = Get-Process -Name OneDrive -ErrorAction SilentlyContinue
+if ($null -ne $oneDriveProcess) {
+    Write-Output "OneDrive process is running (PID: $($oneDriveProcess.Id))"
+    exit 0
+}
+
+Write-Output "WARN: OneDrive client is installed but not running."
+Write-Output "Start OneDrive and sign in with a work or school account."
+exit 1

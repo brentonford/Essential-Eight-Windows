@@ -8,7 +8,7 @@
     "interpreterScriptSyntax": null, 
     "key": "createpolicyarchivedirectory", 
     "name": "Create Policy Archive Directory", 
-    "osCredKey": "windowscredential", 
+    "osCredKey": "windowscredentialsvcattune", 
     "serverKey": "windowsserver", 
     "successExitCode": 0, 
     "timeout": 60, 

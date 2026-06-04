@@ -1,0 +1,26 @@
+# Verify OneDrive sync is active and Documents folder is protected.
+Write-Output "Verifying OneDrive sync status..."
+
+$syncProcess = Get-Process -Name OneDrive -ErrorAction SilentlyContinue
+if ($null -ne $syncProcess) {
+    Write-Output "OneDrive sync process : Running (PID $($syncProcess.Id))"
+} else {
+    Write-Output "WARN: OneDrive sync process is not running."
+    exit 1
+}
+
+$docsPath     = [System.Environment]::GetFolderPath("MyDocuments")
+$oneDriveRoot = (Get-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\OneDrive" -Name "UserFolder" -ErrorAction SilentlyContinue).UserFolder
+$docsInOD     = $null -ne $oneDriveRoot -and $docsPath.StartsWith($oneDriveRoot)
+
+Write-Output "Documents path        : $docsPath"
+Write-Output "Documents under OD    : $docsInOD"
+
+if ($docsInOD) {
+    Write-Output "Sync verification PASSED: Documents folder is under OneDrive sync."
+    exit 0
+}
+
+Write-Output "WARN: Documents folder is NOT under OneDrive sync path."
+Write-Output "Configure Known Folder Move to protect user documents."
+exit 1

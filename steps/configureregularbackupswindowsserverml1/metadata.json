@@ -1,0 +1,30 @@
+{
+    "actionOnStepFail": "stop", 
+    "concurrency": 1, 
+    "enabled": true, 
+    "externalUuid4": "f269b09f-b7ed-4bab-9c37-5a7ccc4fc238", 
+    "isBlueprint": true, 
+    "key": "configureregularbackupswindowsserverml1", 
+    "links": [
+        {
+            "stepKey": "installwindowsserverbackupfeature"
+        }, 
+        {
+            "stepKey": "rebootmachine"
+        }, 
+        {
+            "stepKey": "validatebackupparameters"
+        }, 
+        {
+            "stepKey": "configurebackupscheduleanddestination"
+        }, 
+        {
+            "stepKey": "verifyvssandbackupschedule"
+        }, 
+        {
+            "stepKey": "runinitialbackup"
+        }
+    ], 
+    "name": "Configure Regular Backups Windows Server - ML1", 
+    "type": "com.servertribe.attune.tuples.StepGroupTuple"
+}

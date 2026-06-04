@@ -1,7 +1,0 @@
-{
-    "externalUuid4": "17a025ae-bcac-4777-8e07-cb0ffe254de7", 
-    "key": "windowscredential", 
-    "name": "Windows Credential", 
-    "showInPlan": true, 
-    "type": "c.s.s.b.phv.WinOsCred"
-}

@@ -8,7 +8,7 @@
     "interpreterScriptSyntax": null, 
     "key": "checkwinrmauthenticationconfiguration", 
     "name": "Check WinRM Authentication Configuration", 
-    "osCredKey": "windowscredential", 
+    "osCredKey": "windowscredentialsvcattune", 
     "serverKey": "windowsserver", 
     "successExitCode": 0, 
     "timeout": 60, 

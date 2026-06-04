@@ -8,7 +8,7 @@
     "interpreterScriptSyntax": null, 
     "key": "applyfirefoxsecuritypolicysettings", 
     "name": "Apply Firefox Security Policy Settings", 
-    "osCredKey": "windowscredential", 
+    "osCredKey": "windowscredentialsvcattune", 
     "serverKey": "windowsserver", 
     "successExitCode": 0, 
     "timeout": 60, 

@@ -1,0 +1,75 @@
+$hostname   = $env:COMPUTERNAME
+$reportDate = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+
+# OneDrive client check
+$oneDriveExe = @(
+    "$env:LOCALAPPDATA\Microsoft\OneDrive\OneDrive.exe",
+    "$env:ProgramFiles\Microsoft OneDrive\OneDrive.exe"
+) | Where-Object { Test-Path $_ } | Select-Object -First 1
+
+$odRunning    = $null -ne (Get-Process -Name OneDrive -ErrorAction SilentlyContinue)
+$oneDriveRoot = (Get-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\OneDrive" -Name "UserFolder" -ErrorAction SilentlyContinue).UserFolder
+$tenantName   = (Get-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\OneDrive\Accounts\Business1" -Name "DisplayName" -ErrorAction SilentlyContinue).DisplayName
+
+# KFM check
+$kfmOk = $false
+$kfmPath = "HKCU:\Software\Microsoft\OneDrive\Accounts"
+if (Test-Path $kfmPath) {
+    $accounts = Get-ChildItem $kfmPath -ErrorAction SilentlyContinue
+    foreach ($account in $accounts) {
+        $kfmDesktop   = (Get-ItemProperty $account.PSPath -Name "KFMFolderDesktop"   -ErrorAction SilentlyContinue).KFMFolderDesktop
+        $kfmDocuments = (Get-ItemProperty $account.PSPath -Name "KFMFolderDocuments" -ErrorAction SilentlyContinue).KFMFolderDocuments
+        if ($kfmDesktop -and $kfmDocuments) { $kfmOk = $true; break }
+    }
+}
+
+# ISM-1511: Documents folder under OneDrive
+$docsPath = [System.Environment]::GetFolderPath("MyDocuments")
+$docsInOD = $null -ne $oneDriveRoot -and $docsPath.StartsWith($oneDriveRoot)
+
+# ISM-1811: OneDrive cloud = not directly accessible from endpoint (PASS by design)
+$ism1811Result = if ($odRunning -and $oneDriveRoot) { "PASS -- OneDrive cloud storage is not directly accessible from this endpoint" } else { "FAIL -- OneDrive not active" }
+
+$overallPass = $null -ne $oneDriveExe -and $odRunning -and $kfmOk -and $docsInOD
+
+$separator = "=" * 60
+
+Write-Output $separator
+Write-Output "  ESSENTIAL EIGHT ML1 -- REGULAR BACKUPS (DESKTOP)"
+Write-Output "  ASD Control: Mitigation Strategy 8"
+Write-Output "  ISM Controls: 1511, 1515, 1810, 1811, 1812, 1814"
+Write-Output "  Reference  : cyber.gov.au/essential-eight"
+Write-Output $separator
+Write-Output "  Endpoint   : $hostname"
+Write-Output "  Report Date: $reportDate"
+Write-Output "  Generated  : AttuneOps"
+Write-Output $separator
+Write-Output ""
+Write-Output "  BACKUP INFRASTRUCTURE"
+Write-Output "    OneDrive client present : $(if ($oneDriveExe) { 'Yes' } else { 'No' })"
+Write-Output "    OneDrive process running: $odRunning"
+Write-Output "    M365 tenant             : $(if ($tenantName) { $tenantName } else { 'Not detected' })"
+Write-Output "    OneDrive root           : $(if ($oneDriveRoot) { $oneDriveRoot } else { 'Not configured' })"
+Write-Output ""
+Write-Output "  [ISM-1511] Backup Currency"
+Write-Output "    Known Folder Move       : $(if ($kfmOk) { 'Configured' } else { 'Not configured' })"
+Write-Output "    Documents under OneDrive: $docsInOD"
+Write-Output "    Result                  : $(if ($kfmOk -and $docsInOD) { 'PASS' } else { 'FAIL' })"
+Write-Output ""
+Write-Output "  [ISM-1811] Destination Isolation"
+Write-Output "    Result : $ism1811Result"
+Write-Output ""
+Write-Output "  [ISM-1515] Restoration Tested"
+Write-Output "    Result : SEE STEP 5 output"
+Write-Output "    ACTION : Conduct a manual restore test on a fresh/test device annually."
+Write-Output ""
+Write-Output $separator
+Write-Output "  OVERALL STATUS : $(if ($overallPass) { 'COMPLIANT' } else { 'NON-COMPLIANT' })"
+Write-Output $separator
+
+if (-not $overallPass) {
+    Write-Output ""
+    Write-Output "  REMEDIATION: Ensure OneDrive is running, signed in to M365, and"
+    Write-Output "  Known Folder Move is configured for Documents, Desktop, and Pictures."
+    exit 1
+}

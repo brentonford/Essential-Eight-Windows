@@ -8,7 +8,7 @@
     "interpreterScriptSyntax": null, 
     "key": "setpolicyoptionsandenforcementmode", 
     "name": "Set Policy Options and Enforcement Mode", 
-    "osCredKey": "windowscredential", 
+    "osCredKey": "windowscredentialsvcattune", 
     "serverKey": "windowsserver", 
     "successExitCode": 0, 
     "timeout": 60, 

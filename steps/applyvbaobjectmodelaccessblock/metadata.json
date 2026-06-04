@@ -8,7 +8,7 @@
     "interpreterScriptSyntax": null, 
     "key": "applyvbaobjectmodelaccessblock", 
     "name": "Apply VBA Object Model Access Block", 
-    "osCredKey": "windowscredential", 
+    "osCredKey": "windowscredentialsvcattune", 
     "serverKey": "windowsserver", 
     "successExitCode": 0, 
     "timeout": 60, 
