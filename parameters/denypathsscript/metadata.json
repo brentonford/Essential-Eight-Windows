@@ -1,7 +1,0 @@
-{
-    "externalUuid4": "b6798a9a-2055-4b47-b9d6-176c44760093", 
-    "key": "denypathsscript", 
-    "name": "Deny Paths Script", 
-    "showInPlan": true, 
-    "type": "c.s.s.b.phv.Text"
-}

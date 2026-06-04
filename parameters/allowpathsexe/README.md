@@ -1,1 +1,0 @@
-Example: `%WINDIR%\*,%PROGRAMFILES%\*`

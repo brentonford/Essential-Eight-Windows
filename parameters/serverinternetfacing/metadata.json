@@ -1,7 +1,0 @@
-{
-    "externalUuid4": "b3139942-870a-4d8b-ade1-40355c812db3", 
-    "key": "serverinternetfacing", 
-    "name": "Server Internet Facing", 
-    "showInPlan": true, 
-    "type": "c.s.s.b.phv.Text"
-}

@@ -1,7 +1,0 @@
-{
-    "externalUuid4": "0cfd0033-eec7-4dba-bca0-27ceed4aa95a", 
-    "key": "applypthmitigation", 
-    "name": "Apply Pth Mitigation", 
-    "showInPlan": true, 
-    "type": "c.s.s.b.phv.Text"
-}

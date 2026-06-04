@@ -1,1 +1,0 @@
-Is this server internet-facing? Enter `true` for internet-facing (ISM-1694: 2-week patch window, 48-hour critical) or `false` for non-internet-facing (ISM-1695: 1-month patch window). Drives the compliance threshold in the Verify report.

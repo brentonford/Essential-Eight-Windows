@@ -1,1 +1,0 @@
-Example: `%OSDRIVE%\Users\*\AppData\Local\Temp\*,%OSDRIVE%\Users\*\AppData\Roaming\*,%OSDRIVE%\Users\*\AppData\Local\*,%OSDRIVE%\Users\*\Downloads\*,%WINDIR%\Temp\*,%WINDIR%\Tasks\*,%WINDIR%\Tracing\*,%WINDIR%\Registration\CRMLog\*,%WINDIR%\System32\spool\drivers\color\*,%WINDIR%\System32\Tasks\Microsoft\Windows\SyncCenter\*`
