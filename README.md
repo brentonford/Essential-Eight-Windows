@@ -1,3 +1,8 @@
+[![Docs](https://img.shields.io/badge/docs-latest-brightgreen.svg)](https://attuneops.io/docs/)
+[![Discord](https://img.shields.io/discord/844971127703994369)](https://discord.gg/PUsEXApb)
+[![Docs](https://img.shields.io/badge/videos-watch-brightgreen.svg)](https://www.youtube.com/@attuneops)
+[![Generic badge](https://img.shields.io/badge/download-latest-brightgreen.svg)](https://attuneops.io)
+
 # Essential Eight - Windows
 
 An AttuneOps project that automates the configuration and verification of the Australian Signals Directorate (ASD) **Essential Eight** mitigation strategies, at **Maturity Level 1 (ML1)**, on Windows targets.
