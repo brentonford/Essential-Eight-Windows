@@ -1,0 +1,36 @@
+{
+    "actionOnStepFail": "stop", 
+    "concurrency": 1, 
+    "enabled": true, 
+    "externalUuid4": "71d0d7a5-f660-4c61-bc6c-feb2248196de", 
+    "isBlueprint": true, 
+    "key": "essentialeightconfigurationwindowdesktopml1", 
+    "links": [
+        {
+            "stepKey": "e801configurepatchapplicationsml1"
+        }, 
+        {
+            "stepKey": "e802configurepatchoperatingsystemsml1"
+        }, 
+        {
+            "stepKey": "e803configuremultifactorauthenticationml1"
+        }, 
+        {
+            "stepKey": "e804configurerestrictadministrativeprivilegesml1"
+        }, 
+        {
+            "stepKey": "e805configureapplicationcontrolml1"
+        }, 
+        {
+            "stepKey": "e806configurerestrictmicrosoftofficemacrosml1"
+        }, 
+        {
+            "stepKey": "e807configureuserapplicationhardeningml1"
+        }, 
+        {
+            "stepKey": "e808configureregularbackupswindowsdesktopml1"
+        }
+    ], 
+    "name": "Essential Eight Configuration Window Desktop - ML1", 
+    "type": "com.servertribe.attune.tuples.StepGroupTuple"
+}
