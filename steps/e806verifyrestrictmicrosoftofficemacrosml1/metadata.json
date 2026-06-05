@@ -1,0 +1,30 @@
+{
+    "actionOnStepFail": "stop", 
+    "concurrency": 1, 
+    "enabled": true, 
+    "externalUuid4": "350898c6-8af5-4d70-9970-f942634f22de", 
+    "isBlueprint": true, 
+    "key": "e806verifyrestrictmicrosoftofficemacrosml1", 
+    "links": [
+        {
+            "stepKey": "detectinstalledofficeversionsandapplications"
+        }, 
+        {
+            "stepKey": "checkvbawarningspolicysetting"
+        }, 
+        {
+            "stepKey": "checkinternetmacroblockpolicy"
+        }, 
+        {
+            "stepKey": "checkaccessvbomsetting"
+        }, 
+        {
+            "stepKey": "checkforuserleveloverrideconflicts"
+        }, 
+        {
+            "stepKey": "outputml1officemacrocompliancereport"
+        }
+    ], 
+    "name": "E8-06 Verify Restrict Microsoft Office Macros - ML1", 
+    "type": "com.servertribe.attune.tuples.StepGroupTuple"
+}

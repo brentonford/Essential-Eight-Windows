@@ -1,0 +1,27 @@
+{
+    "actionOnStepFail": "stop", 
+    "concurrency": 1, 
+    "enabled": true, 
+    "externalUuid4": "e2038c9a-d4f3-4c31-a346-7938eb8c9295", 
+    "isBlueprint": true, 
+    "key": "e803configuremultifactorauthenticationml1", 
+    "links": [
+        {
+            "stepKey": "enablenetworklevelauthenticationforrdp"
+        }, 
+        {
+            "stepKey": "configureaccountlockoutpolicy"
+        }, 
+        {
+            "stepKey": "hardenwinrmauthenticationmethods"
+        }, 
+        {
+            "stepKey": "enableauthenticationauditlogging"
+        }, 
+        {
+            "stepKey": "detectthirdpartymfaproviderinstallation"
+        }
+    ], 
+    "name": "E8-03 Configure Multi-Factor Authentication - ML1", 
+    "type": "com.servertribe.attune.tuples.StepGroupTuple"
+}

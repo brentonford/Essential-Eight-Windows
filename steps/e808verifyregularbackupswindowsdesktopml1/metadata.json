@@ -1,0 +1,30 @@
+{
+    "actionOnStepFail": "stop", 
+    "concurrency": 1, 
+    "enabled": true, 
+    "externalUuid4": "479e5ce4-4a98-4466-8b82-f15961c78a7c", 
+    "isBlueprint": true, 
+    "key": "e808verifyregularbackupswindowsdesktopml1", 
+    "links": [
+        {
+            "stepKey": "detectwindowsdesktopos"
+        }, 
+        {
+            "stepKey": "checksyncclient"
+        }, 
+        {
+            "stepKey": "checkknownfoldermovecoverage"
+        }, 
+        {
+            "stepKey": "checklocalonlydata"
+        }, 
+        {
+            "stepKey": "verifyrecoverypath"
+        }, 
+        {
+            "stepKey": "outputml1windowsdesktopbackupscompliancereport"
+        }
+    ], 
+    "name": "E8-08 Verify Regular Backups Windows Desktop - ML1", 
+    "type": "com.servertribe.attune.tuples.StepGroupTuple"
+}

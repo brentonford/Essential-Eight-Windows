@@ -1,0 +1,30 @@
+{
+    "actionOnStepFail": "stop", 
+    "concurrency": 1, 
+    "enabled": true, 
+    "externalUuid4": "70384094-3d52-4019-917a-a49b27de6658", 
+    "isBlueprint": true, 
+    "key": "e807verifyuserapplicationhardeningml1", 
+    "links": [
+        {
+            "stepKey": "checkinternetexplorer11status"
+        }, 
+        {
+            "stepKey": "checkjavabrowserpluginstatus"
+        }, 
+        {
+            "stepKey": "checkedgepolicysettings"
+        }, 
+        {
+            "stepKey": "checkchromepolicysettings"
+        }, 
+        {
+            "stepKey": "checkfirefoxpolicysettings"
+        }, 
+        {
+            "stepKey": "outputml1userapplicationhardeningcompliancereport"
+        }
+    ], 
+    "name": "E8-07 Verify User Application Hardening - ML1", 
+    "type": "com.servertribe.attune.tuples.StepGroupTuple"
+}

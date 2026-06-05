@@ -1,0 +1,30 @@
+{
+    "actionOnStepFail": "stop", 
+    "concurrency": 1, 
+    "enabled": true, 
+    "externalUuid4": "de4b7961-dcbd-4c55-ab7d-e654aaf88d0a", 
+    "isBlueprint": true, 
+    "key": "e803verifymultifactorauthenticationml1", 
+    "links": [
+        {
+            "stepKey": "checknetworklevelauthenticationstatus"
+        }, 
+        {
+            "stepKey": "checkaccountlockoutpolicy"
+        }, 
+        {
+            "stepKey": "checkwinrmauthenticationconfiguration"
+        }, 
+        {
+            "stepKey": "checkauthenticationauditlogging"
+        }, 
+        {
+            "stepKey": "checkmfaproviderpresence"
+        }, 
+        {
+            "stepKey": "outputml1mfacompliancereport"
+        }
+    ], 
+    "name": "E8-03 Verify Multi-Factor Authentication - ML1", 
+    "type": "com.servertribe.attune.tuples.StepGroupTuple"
+}

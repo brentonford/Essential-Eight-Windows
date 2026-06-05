@@ -1,0 +1,33 @@
+{
+    "actionOnStepFail": "stop", 
+    "concurrency": 1, 
+    "enabled": true, 
+    "externalUuid4": "61de43c4-ae0d-4b94-a617-61fd7f211838", 
+    "isBlueprint": true, 
+    "key": "e801verifypatchapplicationsml1", 
+    "links": [
+        {
+            "stepKey": "checkpswindowsupdatemoduleavailability"
+        }, 
+        {
+            "stepKey": "checkwingetavailability"
+        }, 
+        {
+            "stepKey": "checkoutstandingapplicationsecurityupdates"
+        }, 
+        {
+            "stepKey": "readlastapplicationupdatehistory"
+        }, 
+        {
+            "stepKey": "scanforeolapplications"
+        }, 
+        {
+            "stepKey": "checkwingetupgradeavailability"
+        }, 
+        {
+            "stepKey": "outputml1patchapplicationscompliancereport"
+        }
+    ], 
+    "name": "E8-01 Verify Patch Applications - ML1", 
+    "type": "com.servertribe.attune.tuples.StepGroupTuple"
+}

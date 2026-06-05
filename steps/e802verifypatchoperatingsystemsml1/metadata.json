@@ -1,0 +1,33 @@
+{
+    "actionOnStepFail": "stop", 
+    "concurrency": 1, 
+    "enabled": true, 
+    "externalUuid4": "91d82932-449d-4803-a91f-3612140a7282", 
+    "isBlueprint": true, 
+    "key": "e802verifypatchoperatingsystemsml1", 
+    "links": [
+        {
+            "stepKey": "checkosversionandlifecyclestatus"
+        }, 
+        {
+            "stepKey": "checkwindowsupdateconfiguration"
+        }, 
+        {
+            "stepKey": "checkpendingossecurityupdates"
+        }, 
+        {
+            "stepKey": "checklastospatchdatevsml1timingthreshold"
+        }, 
+        {
+            "stepKey": "checkwindowsdefendervulnerabilityscanningstatus"
+        }, 
+        {
+            "stepKey": "checkpendingrebootstatus"
+        }, 
+        {
+            "stepKey": "outputml1patchoperatingsystemscompliancereport"
+        }
+    ], 
+    "name": "E8-02 Verify Patch Operating Systems - ML1", 
+    "type": "com.servertribe.attune.tuples.StepGroupTuple"
+}

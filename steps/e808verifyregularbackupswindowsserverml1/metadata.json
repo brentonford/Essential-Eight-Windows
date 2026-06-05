@@ -1,0 +1,30 @@
+{
+    "actionOnStepFail": "stop", 
+    "concurrency": 1, 
+    "enabled": true, 
+    "externalUuid4": "a99fdca6-e921-4e8d-be91-e69f508dcf29", 
+    "isBlueprint": true, 
+    "key": "e808verifyregularbackupswindowsserverml1", 
+    "links": [
+        {
+            "stepKey": "detectostype"
+        }, 
+        {
+            "stepKey": "checkwindowsserverbackupfeature"
+        }, 
+        {
+            "stepKey": "checklastbackupstatus"
+        }, 
+        {
+            "stepKey": "checkdestinationisolation"
+        }, 
+        {
+            "stepKey": "testrestore"
+        }, 
+        {
+            "stepKey": "outputml1windowsserverbackupscompliancereport"
+        }
+    ], 
+    "name": "E8-08 Verify Regular Backups Windows Server - ML1", 
+    "type": "com.servertribe.attune.tuples.StepGroupTuple"
+}

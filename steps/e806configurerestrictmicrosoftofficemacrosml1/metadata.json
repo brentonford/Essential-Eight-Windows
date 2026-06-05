@@ -1,0 +1,27 @@
+{
+    "actionOnStepFail": "stop", 
+    "concurrency": 1, 
+    "enabled": true, 
+    "externalUuid4": "b5bcf2c0-4de2-4153-9ca4-bf9085befe7b", 
+    "isBlueprint": true, 
+    "key": "e806configurerestrictmicrosoftofficemacrosml1", 
+    "links": [
+        {
+            "stepKey": "detectinstalledofficeversionsandapplications"
+        }, 
+        {
+            "stepKey": "applyvbamacrodisablepolicy"
+        }, 
+        {
+            "stepKey": "applyinternetmacroblockpolicy"
+        }, 
+        {
+            "stepKey": "applyvbaobjectmodelaccessblock"
+        }, 
+        {
+            "stepKey": "disabletrustbarforunsignedmacros"
+        }
+    ], 
+    "name": "E8-06 Configure Restrict Microsoft Office Macros - ML1", 
+    "type": "com.servertribe.attune.tuples.StepGroupTuple"
+}

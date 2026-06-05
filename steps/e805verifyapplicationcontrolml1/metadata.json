@@ -1,0 +1,27 @@
+{
+    "actionOnStepFail": "stop", 
+    "concurrency": 1, 
+    "enabled": true, 
+    "externalUuid4": "4988447f-24d5-4edc-8897-19151255dc89", 
+    "isBlueprint": true, 
+    "key": "e805verifyapplicationcontrolml1", 
+    "links": [
+        {
+            "stepKey": "checkwdacpolicydeployment"
+        }, 
+        {
+            "stepKey": "checkenforcementmode"
+        }, 
+        {
+            "stepKey": "checkpathdenyrulecoverage"
+        }, 
+        {
+            "stepKey": "readwdaceventlog"
+        }, 
+        {
+            "stepKey": "outputml1applicationcontrolcompliancereport"
+        }
+    ], 
+    "name": "E8-05 Verify Application Control - ML1", 
+    "type": "com.servertribe.attune.tuples.StepGroupTuple"
+}

@@ -1,0 +1,24 @@
+{
+    "actionOnStepFail": "stop", 
+    "concurrency": 1, 
+    "enabled": true, 
+    "externalUuid4": "0b5ae74a-3f8a-4a15-9acf-32ed182d7ab7", 
+    "isBlueprint": true, 
+    "key": "e807configureuserapplicationhardeningml1", 
+    "links": [
+        {
+            "stepKey": "disableinternetexplorer11"
+        }, 
+        {
+            "stepKey": "applyedgesecuritypolicysettings"
+        }, 
+        {
+            "stepKey": "applychromesecuritypolicysettings"
+        }, 
+        {
+            "stepKey": "applyfirefoxsecuritypolicysettings"
+        }
+    ], 
+    "name": "E8-07 Configure User Application Hardening - ML1", 
+    "type": "com.servertribe.attune.tuples.StepGroupTuple"
+}

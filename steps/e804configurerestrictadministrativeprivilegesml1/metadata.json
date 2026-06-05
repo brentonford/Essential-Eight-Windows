@@ -1,0 +1,30 @@
+{
+    "actionOnStepFail": "stop", 
+    "concurrency": 1, 
+    "enabled": true, 
+    "externalUuid4": "9ba02781-ee16-42d3-9870-3481311764c3", 
+    "isBlueprint": true, 
+    "key": "e804configurerestrictadministrativeprivilegesml1", 
+    "links": [
+        {
+            "stepKey": "enumerateandreportadminaccountinventory"
+        }, 
+        {
+            "stepKey": "disablebuiltinadministratoraccount"
+        }, 
+        {
+            "stepKey": "configurepasswordpolicyforprivilegedaccounts"
+        }, 
+        {
+            "stepKey": "configureuserrightsassignmentrestrictserverlogon"
+        }, 
+        {
+            "stepKey": "blocknetworklogonforlocaladministrativeaccounts"
+        }, 
+        {
+            "stepKey": "enableprivilegedaccountauditpolicy"
+        }
+    ], 
+    "name": "E8-04 Configure Restrict Administrative Privileges - ML1", 
+    "type": "com.servertribe.attune.tuples.StepGroupTuple"
+}
